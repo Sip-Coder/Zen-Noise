@@ -220,7 +220,7 @@ export function useAudioEngine(initialVolume: number = 0.5): AudioEngineState {
   };
 
   useEffect(() => {
-    const isOff = waveIntensity === "off";
+    const isOff = waveIntensity === ("off" as any);
     if (!isPlaying || isOff || !gainNodeRef.current || !audioContextRef.current) {
       // Reset all extra gains
       [coffeeGainRef, rainGainRef, windGainRef, campfireGainRef, thunderGainRef, birdsGainRef].forEach(ref => {
@@ -247,7 +247,7 @@ export function useAudioEngine(initialVolume: number = 0.5): AudioEngineState {
     if (campfireGainRef.current) campfireGainRef.current.gain.setTargetAtTime(waveIntensity === "campfire" ? 0.15 : 0, now, 1);
 
     const scheduleWave = () => {
-      if (ctx.state !== "running" || waveIntensity === "off") return;
+      if (ctx.state !== "running" || waveIntensity === ("off" as any)) return;
 
       const now = ctx.currentTime;
       const isDeep = waveIntensity === "medium";
