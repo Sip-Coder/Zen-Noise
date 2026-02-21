@@ -99,7 +99,7 @@ export function useAudioEngine(initialVolume: number = 0.5): AudioEngineState {
     // Setup Media Session API
     if ("mediaSession" in navigator) {
       navigator.mediaSession.metadata = new MediaMetadata({
-        title: "Brown Noise",
+        title: "Zen Noise",
         artist: "Sleep Aid",
         album: "Focus & Rest",
         artwork: [

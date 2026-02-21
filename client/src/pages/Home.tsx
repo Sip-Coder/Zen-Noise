@@ -60,7 +60,7 @@ export default function Home() {
             <div className="w-8 h-8 bg-foreground/10 rounded-full flex items-center justify-center">
                 <Moon className="w-4 h-4 text-foreground" />
             </div>
-            <span className="font-display font-bold text-lg tracking-tight">Drift</span>
+            <span className="font-display font-bold text-lg tracking-tight">Zen Noise</span>
         </div>
         
         <Dialog>

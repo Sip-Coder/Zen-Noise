@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 import { Clock } from "lucide-react";
 
-const PRESETS = [15, 30, 45, 60, 90, 120];
+const PRESETS = [15, 30, 45, 60, 90, 120, 180, 240];
 
 interface TimerSelectorProps {
   selectedDuration: number;
@@ -46,7 +46,7 @@ export function TimerSelector({
         <span className="text-sm font-medium uppercase tracking-widest">Sleep Timer</span>
       </div>
       
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+      <div className="grid grid-cols-4 gap-3">
         {PRESETS.map((mins) => (
           <button
             key={mins}
