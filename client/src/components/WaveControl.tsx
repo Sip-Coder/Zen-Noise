@@ -13,6 +13,12 @@ export function WaveControl({ value, onChange }: WaveControlProps) {
     { value: "off", label: "Steady" },
     { value: "low", label: "Gentle" },
     { value: "medium", label: "Deep" },
+    { value: "rain", label: "Rain" },
+    { value: "coffee", label: "Coffee" },
+    { value: "thunder", label: "Storm" },
+    { value: "wind", label: "Wind" },
+    { value: "birds", label: "Birds" },
+    { value: "campfire", label: "Fire" },
   ];
 
   return (
@@ -20,18 +26,18 @@ export function WaveControl({ value, onChange }: WaveControlProps) {
       <div className="flex items-center justify-between text-muted-foreground mb-4">
         <div className="flex items-center gap-2">
             <Waves className="w-4 h-4" />
-            <span className="text-sm font-medium uppercase tracking-widest">Ocean Effect</span>
+            <span className="text-sm font-medium uppercase tracking-widest">Ambient Effects</span>
         </div>
-        <span className="text-xs opacity-50">Amplitude Modulation</span>
+        <span className="text-xs opacity-50">Procedural Synthesis</span>
       </div>
 
-      <div className="flex p-1 bg-secondary/50 rounded-2xl border border-white/5 relative">
+      <div className="grid grid-cols-3 gap-2 p-1 bg-secondary/50 rounded-2xl border border-white/5 relative">
         {options.map((opt) => (
           <button
             key={opt.value}
             onClick={() => onChange(opt.value)}
             className={cn(
-              "flex-1 py-3 text-sm font-medium rounded-xl relative z-10 transition-colors duration-200",
+              "py-3 text-sm font-medium rounded-xl relative z-10 transition-colors duration-200",
               value === opt.value ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
             )}
           >
