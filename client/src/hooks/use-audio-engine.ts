@@ -1,21 +1,25 @@
 import { useRef, useEffect, useState, useCallback } from "react";
 
-export type WaveIntensity = "off" | "low" | "medium" | "rain" | "coffee" | "thunder" | "wind" | "birds" | "campfire";
+export type WaveIntensity = "steady" | "gentle" | "deep";
+export type AmbientSound = "rain" | "coffee" | "thunder" | "wind" | "birds" | "campfire" | "chanting" | "purring" | "forest";
 
 interface AudioEngineState {
   isPlaying: boolean;
   volume: number;
   waveIntensity: WaveIntensity;
+  activeAmbients: AmbientSound[];
   togglePlay: () => void;
   setVolume: (vol: number) => void;
   setWaveIntensity: (intensity: WaveIntensity) => void;
+  toggleAmbient: (sound: AmbientSound) => void;
   stopWithFade: (durationSec?: number) => void;
 }
 
 export function useAudioEngine(initialVolume: number = 0.5): AudioEngineState {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolumeState] = useState(initialVolume);
-  const [waveIntensity, setWaveIntensityState] = useState<WaveIntensity>("off");
+  const [waveIntensity, setWaveIntensityState] = useState<WaveIntensity>("steady");
+  const [activeAmbients, setActiveAmbients] = useState<AmbientSound[]>([]);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const gainNodeRef = useRef<GainNode | null>(null);
@@ -29,6 +33,9 @@ export function useAudioEngine(initialVolume: number = 0.5): AudioEngineState {
   const windGainRef = useRef<GainNode | null>(null);
   const campfireGainRef = useRef<GainNode | null>(null);
   const birdsGainRef = useRef<GainNode | null>(null);
+  const chantingGainRef = useRef<GainNode | null>(null);
+  const purringGainRef = useRef<GainNode | null>(null);
+  const forestGainRef = useRef<GainNode | null>(null);
 
   // Initialize Audio Context (lazy load on user gesture usually, but setup nodes)
   const initAudio = useCallback(() => {
@@ -138,6 +145,29 @@ export function useAudioEngine(initialVolume: number = 0.5): AudioEngineState {
     birdsGain.gain.value = 0;
     birdsGainRef.current = birdsGain;
     birdsGain.connect(ctx.destination);
+
+    // --- Tibetan Chanting (Low Humming Oscillators) ---
+    const chantingGain = ctx.createGain();
+    chantingGain.gain.value = 0;
+    chantingGainRef.current = chantingGain;
+    chantingGain.connect(ctx.destination);
+
+    // --- Cat Purring (Low Frequency Pulse/Noise) ---
+    const purringGain = ctx.createGain();
+    purringGain.gain.value = 0;
+    purringGainRef.current = purringGain;
+    purringGain.connect(ctx.destination);
+
+    // --- Forest Rustling (Filtered High-freq Noise) ---
+    const forestGain = ctx.createGain();
+    forestGain.gain.value = 0;
+    forestGainRef.current = forestGain;
+    const forestFilter = ctx.createBiquadFilter();
+    forestFilter.type = "bandpass";
+    forestFilter.frequency.value = 3000;
+    noiseSource.connect(forestFilter);
+    forestFilter.connect(forestGain);
+    forestGain.connect(ctx.destination);
 
     // Gain Node for Wave Modulation (or just base noise)
     const waveGain = ctx.createGain();
