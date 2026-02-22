@@ -2,7 +2,7 @@
 
 ## Overview
 
-Zen Noise is a Progressive Web App (PWA) that generates procedural brown noise for deep sleep. It's primarily a **client-side application** — all audio generation, settings, and timer logic happen in the browser using the Web Audio API. The backend exists mainly to serve the frontend and has no meaningful API routes. User preferences (volume, wave intensity) are persisted via `localStorage`, not a database.
+Zen Noise is a Progressive Web App (PWA) that generates procedural brown noise for deep sleep with layerable ambient soundscapes. It's primarily a **client-side application** — all audio generation, settings, and timer logic happen in the browser using the Web Audio API. The backend exists mainly to serve the frontend and has no meaningful API routes. User preferences (volume, wave intensity, per-sound ambient volumes) are persisted via `localStorage`, not a database.
 
 ## User Preferences
 
@@ -21,14 +21,24 @@ Preferred communication style: Simple, everyday language.
 
 ### Core Audio Engine (`use-audio-engine.ts`)
 - Uses the **Web Audio API** to procedurally generate brown noise in real-time
-- Generates a looping buffer using a leaky integrator algorithm (white noise → brown noise)
-- Supports amplitude modulation ("Ocean Effect") with three intensities: off, low, medium
+- Generates separate looping buffers: brown noise (leaky integrator), white noise, pink noise (Voss-McCartney)
+- Supports amplitude modulation with three wave intensities: steady, gentle, deep
 - Volume control with fade-out capability for sleep timer completion
+- **9 layerable ambient sounds** with independent per-sound volume control:
+  - Rain (filtered white+pink noise with volume swells)
+  - Coffee shop (bandpass brown noise + pink murmur + cup clinks)
+  - Storm/Thunder (low-pass brown+pink with scheduled random strikes)
+  - Wind (double low-pass white + rustling bandpass pink)
+  - Birds (oscillator-based chirps with frequency sweeps, trills via LFO)
+  - Fire/Campfire (high-pass white crackle + low-pass brown rumble)
+  - Chanting (singing bowl harmonics + vocal drone oscillators)
+  - Cats/Purring (rhythmic low-frequency sawtooth with pulse envelope)
+  - Forest (layered pink bandpass + white highpass + brown lowpass)
+- Audio architecture: Each ambient has a mixGain (for modulation) → userGain (for volume) → destination chain, independent from the brown noise master chain
 
 ### Key Custom Hooks
-- `useAudioEngine` — manages AudioContext, noise generation, gain nodes, filters, and wave modulation
+- `useAudioEngine` — manages AudioContext, noise generation, per-sound gain chains, filters, wave modulation, and ambient scheduling
 - `useTimer` — countdown timer that triggers a fade-out when complete
-- `useIsMobile` — responsive breakpoint detection
 
 ### PWA Features
 - Service worker (`sw.js`) with cache-first strategy for offline support
@@ -50,7 +60,7 @@ Preferred communication style: Simple, everyday language.
 ```
 client/           → React frontend
   src/
-    components/   → App components (VolumeSlider, WaveControl, TimerSelector, InstallPrompt)
+    components/   → App components (VolumeSlider, WaveControl, AmbientSounds, TimerSelector, InstallPrompt)
     components/ui/→ shadcn/ui component library
     hooks/        → Custom React hooks (audio engine, timer, mobile detection)
     pages/        → Route pages (Home, NotFound)

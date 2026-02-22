@@ -3,52 +3,44 @@ import { useRef, useEffect, useState, useCallback } from "react";
 export type WaveIntensity = "steady" | "gentle" | "deep";
 export type AmbientSound = "rain" | "coffee" | "thunder" | "wind" | "birds" | "campfire" | "chanting" | "purring" | "forest";
 
+export const ALL_AMBIENTS: AmbientSound[] = ["rain", "coffee", "thunder", "wind", "birds", "campfire", "chanting", "purring", "forest"];
+
+export type AmbientVolumes = Record<AmbientSound, number>;
+
+const DEFAULT_VOLUMES: AmbientVolumes = {
+  rain: 0, coffee: 0, thunder: 0, wind: 0, birds: 0,
+  campfire: 0, chanting: 0, purring: 0, forest: 0,
+};
+
 interface AudioEngineState {
   isPlaying: boolean;
   volume: number;
   waveIntensity: WaveIntensity;
-  activeAmbients: AmbientSound[];
+  ambientVolumes: AmbientVolumes;
   togglePlay: () => void;
   setVolume: (vol: number) => void;
   setWaveIntensity: (intensity: WaveIntensity) => void;
-  toggleAmbient: (sound: AmbientSound) => void;
+  setAmbientVolume: (sound: AmbientSound, vol: number) => void;
   stopWithFade: (durationSec?: number) => void;
 }
 
-export function useAudioEngine(initialVolume: number = 0.5, initialAmbients: AmbientSound[] = []): AudioEngineState {
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolumeState] = useState(initialVolume);
-  const [waveIntensity, setWaveIntensityState] = useState<WaveIntensity>("steady");
-  const [activeAmbients, setActiveAmbients] = useState<AmbientSound[]>(initialAmbients);
+function createWhiteNoiseBuffer(ctx: AudioContext, seconds: number): AudioBuffer {
+  const bufferSize = ctx.sampleRate * seconds;
+  const buffer = ctx.createBuffer(2, bufferSize, ctx.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const data = buffer.getChannelData(ch);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+  }
+  return buffer;
+}
 
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const gainNodeRef = useRef<GainNode | null>(null);
-  const masterGainRef = useRef<GainNode | null>(null);
-  const filterRef = useRef<BiquadFilterNode | null>(null);
-  const waveIntervalRef = useRef<number | null>(null);
-  const ambientIntervalsRef = useRef<number[]>([]);
-
-  const coffeeGainRef = useRef<GainNode | null>(null);
-  const rainGainRef = useRef<GainNode | null>(null);
-  const thunderGainRef = useRef<GainNode | null>(null);
-  const windGainRef = useRef<GainNode | null>(null);
-  const campfireGainRef = useRef<GainNode | null>(null);
-  const birdsGainRef = useRef<GainNode | null>(null);
-  const chantingGainRef = useRef<GainNode | null>(null);
-  const purringGainRef = useRef<GainNode | null>(null);
-  const forestGainRef = useRef<GainNode | null>(null);
-
-  const initAudio = useCallback(() => {
-    if (audioContextRef.current) return audioContextRef.current;
-
-    const Ctx = window.AudioContext || (window as any).webkitAudioContext;
-    const ctx = new Ctx();
-    audioContextRef.current = ctx;
-
-    const bufferSize = ctx.sampleRate * 5;
-    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-
+function createBrownNoiseBuffer(ctx: AudioContext, seconds: number): AudioBuffer {
+  const bufferSize = ctx.sampleRate * seconds;
+  const buffer = ctx.createBuffer(2, bufferSize, ctx.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const data = buffer.getChannelData(ch);
     let lastOut = 0;
     for (let i = 0; i < bufferSize; i++) {
       const white = Math.random() * 2 - 1;
@@ -57,9 +49,73 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbients: Amb
       if (data[i] > 1) data[i] = 1;
       if (data[i] < -1) data[i] = -1;
     }
+  }
+  return buffer;
+}
+
+function createPinkNoiseBuffer(ctx: AudioContext, seconds: number): AudioBuffer {
+  const bufferSize = ctx.sampleRate * seconds;
+  const buffer = ctx.createBuffer(2, bufferSize, ctx.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const data = buffer.getChannelData(ch);
+    let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+    for (let i = 0; i < bufferSize; i++) {
+      const white = Math.random() * 2 - 1;
+      b0 = 0.99886 * b0 + white * 0.0555179;
+      b1 = 0.99332 * b1 + white * 0.0750759;
+      b2 = 0.96900 * b2 + white * 0.1538520;
+      b3 = 0.86650 * b3 + white * 0.3104856;
+      b4 = 0.55000 * b4 + white * 0.5329522;
+      b5 = -0.7616 * b5 - white * 0.0168980;
+      data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+      b6 = white * 0.115926;
+    }
+  }
+  return buffer;
+}
+
+export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolumes?: AmbientVolumes): AudioEngineState {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [volume, setVolumeState] = useState(initialVolume);
+  const [waveIntensity, setWaveIntensityState] = useState<WaveIntensity>("steady");
+  const [ambientVolumes, setAmbientVolumes] = useState<AmbientVolumes>({ ...DEFAULT_VOLUMES, ...initialAmbientVolumes });
+
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const gainNodeRef = useRef<GainNode | null>(null);
+  const masterGainRef = useRef<GainNode | null>(null);
+  const filterRef = useRef<BiquadFilterNode | null>(null);
+  const waveIntervalRef = useRef<number | null>(null);
+  const ambientIntervalsRef = useRef<Map<string, number[]>>(new Map());
+
+  const ambientGainsRef = useRef<Record<AmbientSound, GainNode | null>>({
+    rain: null, coffee: null, thunder: null, wind: null, birds: null,
+    campfire: null, chanting: null, purring: null, forest: null,
+  });
+
+  const ambientUserGainsRef = useRef<Record<AmbientSound, GainNode | null>>({
+    rain: null, coffee: null, thunder: null, wind: null, birds: null,
+    campfire: null, chanting: null, purring: null, forest: null,
+  });
+
+  const ambientVolumesRef = useRef(ambientVolumes);
+  useEffect(() => { ambientVolumesRef.current = ambientVolumes; }, [ambientVolumes]);
+
+  const volumeRef = useRef(volume);
+  useEffect(() => { volumeRef.current = volume; }, [volume]);
+
+  const initAudio = useCallback(() => {
+    if (audioContextRef.current) return audioContextRef.current;
+
+    const Ctx = window.AudioContext || (window as any).webkitAudioContext;
+    const ctx = new Ctx();
+    audioContextRef.current = ctx;
+
+    const brownBuffer = createBrownNoiseBuffer(ctx, 5);
+    const whiteBuffer = createWhiteNoiseBuffer(ctx, 4);
+    const pinkBuffer = createPinkNoiseBuffer(ctx, 4);
 
     const noiseSource = ctx.createBufferSource();
-    noiseSource.buffer = buffer;
+    noiseSource.buffer = brownBuffer;
     noiseSource.loop = true;
 
     const lowPass = ctx.createBiquadFilter();
@@ -72,7 +128,7 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbients: Amb
     gainNodeRef.current = waveGain;
 
     const masterGain = ctx.createGain();
-    masterGain.gain.value = initialVolume;
+    masterGain.gain.value = volumeRef.current;
     masterGainRef.current = masterGain;
 
     noiseSource.connect(lowPass);
@@ -80,111 +136,225 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbients: Amb
     waveGain.connect(masterGain);
     masterGain.connect(ctx.destination);
 
-    // --- Coffee Shop (bandpass filtered noise) ---
-    const coffeeGain = ctx.createGain();
-    coffeeGain.gain.value = 0;
-    coffeeGainRef.current = coffeeGain;
-    const coffeeFilter = ctx.createBiquadFilter();
-    coffeeFilter.type = "bandpass";
-    coffeeFilter.frequency.value = 1000;
-    coffeeFilter.Q.value = 0.5;
-    noiseSource.connect(coffeeFilter);
-    coffeeFilter.connect(coffeeGain);
-    coffeeGain.connect(masterGain);
+    const createAmbientChannel = (sound: AmbientSound): GainNode => {
+      const userGain = ctx.createGain();
+      userGain.gain.value = ambientVolumesRef.current[sound];
+      ambientUserGainsRef.current[sound] = userGain;
 
-    // --- Rain (high-passed noise) ---
-    const rainGain = ctx.createGain();
-    rainGain.gain.value = 0;
-    rainGainRef.current = rainGain;
-    const rainFilter = ctx.createBiquadFilter();
-    rainFilter.type = "highpass";
-    rainFilter.frequency.value = 2000;
-    const rainSource = ctx.createBufferSource();
-    rainSource.buffer = buffer;
-    rainSource.loop = true;
-    rainSource.connect(rainFilter);
-    rainFilter.connect(rainGain);
-    rainGain.connect(masterGain);
-    rainSource.start();
+      const mixGain = ctx.createGain();
+      mixGain.gain.value = 1.0;
+      ambientGainsRef.current[sound] = mixGain;
 
-    // --- Wind (low-passed noise) ---
-    const windGain = ctx.createGain();
-    windGain.gain.value = 0;
-    windGainRef.current = windGain;
-    const windFilter = ctx.createBiquadFilter();
-    windFilter.type = "lowpass";
-    windFilter.frequency.value = 500;
-    const windSource = ctx.createBufferSource();
-    windSource.buffer = buffer;
-    windSource.loop = true;
-    windSource.connect(windFilter);
-    windFilter.connect(windGain);
-    windGain.connect(masterGain);
-    windSource.start();
+      mixGain.connect(userGain);
+      userGain.connect(ctx.destination);
+      return mixGain;
+    };
 
-    // --- Campfire (low-passed noise base) ---
-    const campfireGain = ctx.createGain();
-    campfireGain.gain.value = 0;
-    campfireGainRef.current = campfireGain;
-    const fireFilter = ctx.createBiquadFilter();
-    fireFilter.type = "lowpass";
-    fireFilter.frequency.value = 1000;
-    const fireSource = ctx.createBufferSource();
-    fireSource.buffer = buffer;
-    fireSource.loop = true;
-    fireSource.connect(fireFilter);
-    fireFilter.connect(campfireGain);
-    campfireGain.connect(masterGain);
-    fireSource.start();
+    // === RAIN: Filtered white noise with gentle volume modulation ===
+    const rainMix = createAmbientChannel("rain");
+    const rainSrc = ctx.createBufferSource();
+    rainSrc.buffer = whiteBuffer;
+    rainSrc.loop = true;
+    const rainHP = ctx.createBiquadFilter();
+    rainHP.type = "highpass";
+    rainHP.frequency.value = 800;
+    const rainLP = ctx.createBiquadFilter();
+    rainLP.type = "lowpass";
+    rainLP.frequency.value = 8000;
+    const rainBP = ctx.createBiquadFilter();
+    rainBP.type = "peaking";
+    rainBP.frequency.value = 3000;
+    rainBP.gain.value = 4;
+    rainBP.Q.value = 0.5;
+    rainSrc.connect(rainHP);
+    rainHP.connect(rainLP);
+    rainLP.connect(rainBP);
+    rainBP.connect(rainMix);
+    rainSrc.start();
+    const rainSrc2 = ctx.createBufferSource();
+    rainSrc2.buffer = pinkBuffer;
+    rainSrc2.loop = true;
+    const rainLP2 = ctx.createBiquadFilter();
+    rainLP2.type = "lowpass";
+    rainLP2.frequency.value = 2000;
+    const rainG2 = ctx.createGain();
+    rainG2.gain.value = 0.3;
+    rainSrc2.connect(rainLP2);
+    rainLP2.connect(rainG2);
+    rainG2.connect(rainMix);
+    rainSrc2.start();
 
-    // --- Forest (bandpass filtered noise) ---
-    const forestGain = ctx.createGain();
-    forestGain.gain.value = 0;
-    forestGainRef.current = forestGain;
-    const forestFilter = ctx.createBiquadFilter();
-    forestFilter.type = "bandpass";
-    forestFilter.frequency.value = 3000;
-    forestFilter.Q.value = 0.3;
-    const forestSource = ctx.createBufferSource();
-    forestSource.buffer = buffer;
-    forestSource.loop = true;
-    forestSource.connect(forestFilter);
-    forestFilter.connect(forestGain);
-    forestGain.connect(masterGain);
-    forestSource.start();
+    // === COFFEE: Bandpass brown noise + muffled pink noise for murmur ===
+    const coffeeMix = createAmbientChannel("coffee");
+    const coffeeSrc = ctx.createBufferSource();
+    coffeeSrc.buffer = brownBuffer;
+    coffeeSrc.loop = true;
+    const coffeeBP = ctx.createBiquadFilter();
+    coffeeBP.type = "bandpass";
+    coffeeBP.frequency.value = 800;
+    coffeeBP.Q.value = 0.4;
+    const coffeeGain1 = ctx.createGain();
+    coffeeGain1.gain.value = 0.5;
+    coffeeSrc.connect(coffeeBP);
+    coffeeBP.connect(coffeeGain1);
+    coffeeGain1.connect(coffeeMix);
+    coffeeSrc.start();
+    const coffeeSrc2 = ctx.createBufferSource();
+    coffeeSrc2.buffer = pinkBuffer;
+    coffeeSrc2.loop = true;
+    const coffeeLP = ctx.createBiquadFilter();
+    coffeeLP.type = "lowpass";
+    coffeeLP.frequency.value = 2500;
+    const coffeeHP = ctx.createBiquadFilter();
+    coffeeHP.type = "highpass";
+    coffeeHP.frequency.value = 300;
+    const coffeeGain2 = ctx.createGain();
+    coffeeGain2.gain.value = 0.6;
+    coffeeSrc2.connect(coffeeHP);
+    coffeeHP.connect(coffeeLP);
+    coffeeLP.connect(coffeeGain2);
+    coffeeGain2.connect(coffeeMix);
+    coffeeSrc2.start();
 
-    // --- Thunder (gain node for scheduled rumbles) ---
-    const thunderGain = ctx.createGain();
-    thunderGain.gain.value = 0;
-    thunderGainRef.current = thunderGain;
-    const thunderSource = ctx.createBufferSource();
-    thunderSource.buffer = buffer;
-    thunderSource.loop = true;
-    const thunderFilter = ctx.createBiquadFilter();
-    thunderFilter.type = "lowpass";
-    thunderFilter.frequency.value = 200;
-    thunderSource.connect(thunderFilter);
-    thunderFilter.connect(thunderGain);
-    thunderGain.connect(masterGain);
-    thunderSource.start();
+    // === WIND: Low-frequency filtered noise with slow modulation ===
+    const windMix = createAmbientChannel("wind");
+    const windSrc = ctx.createBufferSource();
+    windSrc.buffer = whiteBuffer;
+    windSrc.loop = true;
+    const windLP = ctx.createBiquadFilter();
+    windLP.type = "lowpass";
+    windLP.frequency.value = 600;
+    const windLP2 = ctx.createBiquadFilter();
+    windLP2.type = "lowpass";
+    windLP2.frequency.value = 400;
+    windSrc.connect(windLP);
+    windLP.connect(windLP2);
+    windLP2.connect(windMix);
+    windSrc.start();
+    const windSrc2 = ctx.createBufferSource();
+    windSrc2.buffer = pinkBuffer;
+    windSrc2.loop = true;
+    const windBP = ctx.createBiquadFilter();
+    windBP.type = "bandpass";
+    windBP.frequency.value = 1200;
+    windBP.Q.value = 0.3;
+    const windLeafGain = ctx.createGain();
+    windLeafGain.gain.value = 0.15;
+    windSrc2.connect(windBP);
+    windBP.connect(windLeafGain);
+    windLeafGain.connect(windMix);
+    windSrc2.start();
 
-    // --- Birds (gain node for scheduled chirps) ---
-    const birdsGain = ctx.createGain();
-    birdsGain.gain.value = 0;
-    birdsGainRef.current = birdsGain;
-    birdsGain.connect(masterGain);
+    // === FOREST: Layered filtered noise (leaves + canopy) ===
+    const forestMix = createAmbientChannel("forest");
+    const forestSrc = ctx.createBufferSource();
+    forestSrc.buffer = pinkBuffer;
+    forestSrc.loop = true;
+    const forestBP = ctx.createBiquadFilter();
+    forestBP.type = "bandpass";
+    forestBP.frequency.value = 2500;
+    forestBP.Q.value = 0.3;
+    const forestG1 = ctx.createGain();
+    forestG1.gain.value = 0.5;
+    forestSrc.connect(forestBP);
+    forestBP.connect(forestG1);
+    forestG1.connect(forestMix);
+    forestSrc.start();
+    const forestSrc2 = ctx.createBufferSource();
+    forestSrc2.buffer = whiteBuffer;
+    forestSrc2.loop = true;
+    const forestHP = ctx.createBiquadFilter();
+    forestHP.type = "highpass";
+    forestHP.frequency.value = 4000;
+    const forestG2 = ctx.createGain();
+    forestG2.gain.value = 0.15;
+    forestSrc2.connect(forestHP);
+    forestHP.connect(forestG2);
+    forestG2.connect(forestMix);
+    forestSrc2.start();
+    const forestSrc3 = ctx.createBufferSource();
+    forestSrc3.buffer = brownBuffer;
+    forestSrc3.loop = true;
+    const forestLP = ctx.createBiquadFilter();
+    forestLP.type = "lowpass";
+    forestLP.frequency.value = 500;
+    const forestG3 = ctx.createGain();
+    forestG3.gain.value = 0.2;
+    forestSrc3.connect(forestLP);
+    forestLP.connect(forestG3);
+    forestG3.connect(forestMix);
+    forestSrc3.start();
 
-    // --- Chanting (gain node for scheduled hums) ---
-    const chantingGain = ctx.createGain();
-    chantingGain.gain.value = 0;
-    chantingGainRef.current = chantingGain;
-    chantingGain.connect(masterGain);
+    // === CAMPFIRE: Crackling noise + low rumble ===
+    const fireMix = createAmbientChannel("campfire");
+    const fireSrc = ctx.createBufferSource();
+    fireSrc.buffer = whiteBuffer;
+    fireSrc.loop = true;
+    const fireHP = ctx.createBiquadFilter();
+    fireHP.type = "highpass";
+    fireHP.frequency.value = 2000;
+    const firePeak = ctx.createBiquadFilter();
+    firePeak.type = "peaking";
+    firePeak.frequency.value = 4000;
+    firePeak.gain.value = 6;
+    firePeak.Q.value = 1;
+    const fireG1 = ctx.createGain();
+    fireG1.gain.value = 0.3;
+    fireSrc.connect(fireHP);
+    fireHP.connect(firePeak);
+    firePeak.connect(fireG1);
+    fireG1.connect(fireMix);
+    fireSrc.start();
+    const fireBaseSrc = ctx.createBufferSource();
+    fireBaseSrc.buffer = brownBuffer;
+    fireBaseSrc.loop = true;
+    const fireLP = ctx.createBiquadFilter();
+    fireLP.type = "lowpass";
+    fireLP.frequency.value = 800;
+    const fireG2 = ctx.createGain();
+    fireG2.gain.value = 0.4;
+    fireBaseSrc.connect(fireLP);
+    fireLP.connect(fireG2);
+    fireG2.connect(fireMix);
+    fireBaseSrc.start();
 
-    // --- Purring (gain node for scheduled purrs) ---
-    const purringGain = ctx.createGain();
-    purringGain.gain.value = 0;
-    purringGainRef.current = purringGain;
-    purringGain.connect(masterGain);
+    // === THUNDER: Low rumble noise source (scheduled envelopes in effect) ===
+    const thunderMix = createAmbientChannel("thunder");
+    const thunderSrc = ctx.createBufferSource();
+    thunderSrc.buffer = brownBuffer;
+    thunderSrc.loop = true;
+    const thunderLP = ctx.createBiquadFilter();
+    thunderLP.type = "lowpass";
+    thunderLP.frequency.value = 150;
+    const thunderLP2 = ctx.createBiquadFilter();
+    thunderLP2.type = "lowpass";
+    thunderLP2.frequency.value = 250;
+    thunderSrc.connect(thunderLP);
+    thunderLP.connect(thunderLP2);
+    thunderLP2.connect(thunderMix);
+    thunderSrc.start();
+    const thunderRumbleSrc = ctx.createBufferSource();
+    thunderRumbleSrc.buffer = pinkBuffer;
+    thunderRumbleSrc.loop = true;
+    const thunderBP = ctx.createBiquadFilter();
+    thunderBP.type = "bandpass";
+    thunderBP.frequency.value = 80;
+    thunderBP.Q.value = 0.5;
+    const thunderG2 = ctx.createGain();
+    thunderG2.gain.value = 0.3;
+    thunderRumbleSrc.connect(thunderBP);
+    thunderBP.connect(thunderG2);
+    thunderG2.connect(thunderMix);
+    thunderRumbleSrc.start();
+
+    // === BIRDS: Oscillator-based (scheduled in effect) ===
+    createAmbientChannel("birds");
+
+    // === CHANTING: Oscillator-based (scheduled in effect) ===
+    createAmbientChannel("chanting");
+
+    // === PURRING: Oscillator-based (scheduled in effect) ===
+    createAmbientChannel("purring");
 
     noiseSource.start();
 
@@ -203,7 +373,7 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbients: Amb
     }
 
     return ctx;
-  }, [initialVolume]);
+  }, []);
 
   const togglePlay = async () => {
     const ctx = initAudio();
@@ -224,10 +394,24 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbients: Amb
     gain.gain.cancelScheduledValues(now);
     gain.gain.setValueAtTime(gain.gain.value, now);
     gain.gain.linearRampToValueAtTime(0, now + durationSec);
+
+    ALL_AMBIENTS.forEach(s => {
+      const ug = ambientUserGainsRef.current[s];
+      if (ug) {
+        ug.gain.cancelScheduledValues(now);
+        ug.gain.setValueAtTime(ug.gain.value, now);
+        ug.gain.linearRampToValueAtTime(0, now + durationSec);
+      }
+    });
+
     setTimeout(() => {
       ctx.suspend();
       setIsPlaying(false);
-      gain.gain.setValueAtTime(volume, ctx.currentTime);
+      gain.gain.setValueAtTime(volumeRef.current, ctx.currentTime);
+      ALL_AMBIENTS.forEach(s => {
+        const ug = ambientUserGainsRef.current[s];
+        if (ug) ug.gain.setValueAtTime(ambientVolumesRef.current[s], ctx.currentTime);
+      });
     }, durationSec * 1000);
   };
 
@@ -238,7 +422,14 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbients: Amb
     }
   };
 
-  // Wave intensity effect (brown noise modulation)
+  const setAmbientVolume = useCallback((sound: AmbientSound, vol: number) => {
+    setAmbientVolumes(prev => ({ ...prev, [sound]: vol }));
+    const ug = ambientUserGainsRef.current[sound];
+    if (ug && audioContextRef.current) {
+      ug.gain.setTargetAtTime(vol, audioContextRef.current.currentTime, 0.1);
+    }
+  }, []);
+
   useEffect(() => {
     if (!isPlaying || !gainNodeRef.current || !audioContextRef.current) return;
     const ctx = audioContextRef.current;
@@ -276,144 +467,395 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbients: Amb
     };
   }, [isPlaying, waveIntensity]);
 
-  // Ambient sounds effect (multi-select)
+  // Wind modulation effect
   useEffect(() => {
-    if (!isPlaying || !audioContextRef.current) {
-      const allRefs = [coffeeGainRef, rainGainRef, windGainRef, campfireGainRef, thunderGainRef, birdsGainRef, chantingGainRef, purringGainRef, forestGainRef];
-      allRefs.forEach(ref => {
-        if (ref.current && audioContextRef.current) {
-          ref.current.gain.setTargetAtTime(0, audioContextRef.current.currentTime, 0.5);
-        }
-      });
-      return;
-    }
-
+    if (!isPlaying || !audioContextRef.current || ambientVolumes.wind === 0) return;
     const ctx = audioContextRef.current;
-    const now = ctx.currentTime;
-    const has = (s: AmbientSound) => activeAmbients.includes(s);
+    const mixGain = ambientGainsRef.current.wind;
+    if (!mixGain) return;
 
-    // Continuous looping sounds - just set gain
-    if (coffeeGainRef.current) coffeeGainRef.current.gain.setTargetAtTime(has("coffee") ? 0.08 : 0, now, 1);
-    if (rainGainRef.current) rainGainRef.current.gain.setTargetAtTime(has("rain") ? 0.25 : 0, now, 1);
-    if (windGainRef.current) windGainRef.current.gain.setTargetAtTime(has("wind") ? 0.15 : 0, now, 1);
-    if (campfireGainRef.current) campfireGainRef.current.gain.setTargetAtTime(has("campfire") ? 0.12 : 0, now, 1);
-    if (forestGainRef.current) forestGainRef.current.gain.setTargetAtTime(has("forest") ? 0.08 : 0, now, 1);
+    const scheduleGust = () => {
+      if (ctx.state !== "running") return;
+      const now = ctx.currentTime;
+      const dur = 4 + Math.random() * 8;
+      const peak = 0.6 + Math.random() * 0.4;
+      const base = 0.2 + Math.random() * 0.3;
+      mixGain.gain.setValueAtTime(Math.max(0.01, mixGain.gain.value), now);
+      mixGain.gain.linearRampToValueAtTime(peak, now + dur * 0.4);
+      mixGain.gain.linearRampToValueAtTime(base, now + dur);
+      const id = window.setTimeout(scheduleGust, dur * 1000);
+      const ids = ambientIntervalsRef.current.get("wind") || [];
+      ids.push(id);
+      ambientIntervalsRef.current.set("wind", ids);
+    };
+    scheduleGust();
 
-    // Clear previous scheduled ambient intervals
-    ambientIntervalsRef.current.forEach(id => clearTimeout(id));
-    ambientIntervalsRef.current = [];
+    return () => {
+      (ambientIntervalsRef.current.get("wind") || []).forEach(clearTimeout);
+      ambientIntervalsRef.current.set("wind", []);
+    };
+  }, [isPlaying, ambientVolumes.wind > 0]);
 
-    // Scheduled sounds (thunder rumbles, bird chirps, chanting hums, purring)
-    if (has("thunder")) {
-      const scheduleThunder = () => {
-        if (ctx.state !== "running" || !activeAmbients.includes("thunder")) return;
-        const g = thunderGainRef.current;
-        if (g) {
-          const t = ctx.currentTime;
-          g.gain.setValueAtTime(0, t);
-          g.gain.linearRampToValueAtTime(0.5, t + 0.15);
-          g.gain.exponentialRampToValueAtTime(0.01, t + 3 + Math.random() * 5);
-        }
-        const id = window.setTimeout(scheduleThunder, 15000 + Math.random() * 35000);
-        ambientIntervalsRef.current.push(id);
-      };
-      scheduleThunder();
-    } else if (thunderGainRef.current) {
-      thunderGainRef.current.gain.setTargetAtTime(0, now, 0.5);
-    }
+  // Rain modulation effect
+  useEffect(() => {
+    if (!isPlaying || !audioContextRef.current || ambientVolumes.rain === 0) return;
+    const ctx = audioContextRef.current;
+    const mixGain = ambientGainsRef.current.rain;
+    if (!mixGain) return;
 
-    if (has("birds")) {
-      const scheduleBird = () => {
-        if (ctx.state !== "running" || !activeAmbients.includes("birds")) return;
-        const t = ctx.currentTime;
+    const scheduleRainSwell = () => {
+      if (ctx.state !== "running") return;
+      const now = ctx.currentTime;
+      const dur = 6 + Math.random() * 10;
+      const peak = 0.7 + Math.random() * 0.3;
+      const base = 0.3 + Math.random() * 0.2;
+      mixGain.gain.setValueAtTime(Math.max(0.01, mixGain.gain.value), now);
+      mixGain.gain.linearRampToValueAtTime(peak, now + dur * 0.5);
+      mixGain.gain.linearRampToValueAtTime(base, now + dur);
+      const id = window.setTimeout(scheduleRainSwell, dur * 1000);
+      const ids = ambientIntervalsRef.current.get("rain") || [];
+      ids.push(id);
+      ambientIntervalsRef.current.set("rain", ids);
+    };
+    scheduleRainSwell();
+
+    return () => {
+      (ambientIntervalsRef.current.get("rain") || []).forEach(clearTimeout);
+      ambientIntervalsRef.current.set("rain", []);
+    };
+  }, [isPlaying, ambientVolumes.rain > 0]);
+
+  // Campfire crackle modulation
+  useEffect(() => {
+    if (!isPlaying || !audioContextRef.current || ambientVolumes.campfire === 0) return;
+    const ctx = audioContextRef.current;
+    const mixGain = ambientGainsRef.current.campfire;
+    if (!mixGain) return;
+
+    const scheduleCrackle = () => {
+      if (ctx.state !== "running") return;
+      const now = ctx.currentTime;
+      const dur = 2 + Math.random() * 4;
+      const peak = 0.6 + Math.random() * 0.4;
+      const base = 0.3 + Math.random() * 0.2;
+      mixGain.gain.setValueAtTime(Math.max(0.01, mixGain.gain.value), now);
+      mixGain.gain.linearRampToValueAtTime(peak, now + 0.1 + Math.random() * 0.3);
+      mixGain.gain.linearRampToValueAtTime(base, now + dur);
+      const id = window.setTimeout(scheduleCrackle, dur * 1000);
+      const ids = ambientIntervalsRef.current.get("campfire") || [];
+      ids.push(id);
+      ambientIntervalsRef.current.set("campfire", ids);
+    };
+    scheduleCrackle();
+
+    return () => {
+      (ambientIntervalsRef.current.get("campfire") || []).forEach(clearTimeout);
+      ambientIntervalsRef.current.set("campfire", []);
+    };
+  }, [isPlaying, ambientVolumes.campfire > 0]);
+
+  // Thunder rumbles - random loud strikes
+  useEffect(() => {
+    if (!isPlaying || !audioContextRef.current || ambientVolumes.thunder === 0) return;
+    const ctx = audioContextRef.current;
+    const mixGain = ambientGainsRef.current.thunder;
+    if (!mixGain) return;
+
+    mixGain.gain.setValueAtTime(0.1, ctx.currentTime);
+
+    const scheduleStrike = () => {
+      if (ctx.state !== "running") return;
+      const now = ctx.currentTime;
+      const intensity = 0.4 + Math.random() * 0.6;
+      const rumbleDur = 2 + Math.random() * 6;
+      mixGain.gain.setValueAtTime(Math.max(0.01, mixGain.gain.value), now);
+      mixGain.gain.linearRampToValueAtTime(intensity, now + 0.05 + Math.random() * 0.2);
+      mixGain.gain.linearRampToValueAtTime(intensity * 0.4, now + rumbleDur * 0.3);
+      if (Math.random() > 0.5) {
+        mixGain.gain.linearRampToValueAtTime(intensity * 0.7, now + rumbleDur * 0.5);
+      }
+      mixGain.gain.linearRampToValueAtTime(0.05, now + rumbleDur);
+      const nextDelay = 8000 + Math.random() * 25000;
+      const id = window.setTimeout(scheduleStrike, nextDelay);
+      const ids = ambientIntervalsRef.current.get("thunder") || [];
+      ids.push(id);
+      ambientIntervalsRef.current.set("thunder", ids);
+    };
+    const initialId = window.setTimeout(scheduleStrike, 2000 + Math.random() * 5000);
+    ambientIntervalsRef.current.set("thunder", [initialId]);
+
+    return () => {
+      (ambientIntervalsRef.current.get("thunder") || []).forEach(clearTimeout);
+      ambientIntervalsRef.current.set("thunder", []);
+    };
+  }, [isPlaying, ambientVolumes.thunder > 0]);
+
+  // Birds - individual chirps with varied patterns
+  useEffect(() => {
+    if (!isPlaying || !audioContextRef.current || ambientVolumes.birds === 0) return;
+    const ctx = audioContextRef.current;
+    const mixGain = ambientGainsRef.current.birds;
+    if (!mixGain) return;
+
+    const scheduleChirpGroup = () => {
+      if (ctx.state !== "running") return;
+      const now = ctx.currentTime;
+      const numChirps = 2 + Math.floor(Math.random() * 4);
+      const baseFreq = 2000 + Math.random() * 2500;
+
+      for (let c = 0; c < numChirps; c++) {
+        const chirpStart = now + c * (0.12 + Math.random() * 0.15);
+        const chirpDur = 0.06 + Math.random() * 0.12;
+        const freq = baseFreq * (0.85 + Math.random() * 0.3);
+        const endFreq = freq * (0.7 + Math.random() * 0.6);
+
         const osc = ctx.createOscillator();
         const g = ctx.createGain();
         osc.type = "sine";
-        const freq = 1500 + Math.random() * 2000;
-        osc.frequency.setValueAtTime(freq, t);
-        osc.frequency.exponentialRampToValueAtTime(freq * (0.8 + Math.random() * 0.4), t + 0.15);
-        g.gain.setValueAtTime(0, t);
-        g.gain.linearRampToValueAtTime(0.025, t + 0.02);
-        g.gain.linearRampToValueAtTime(0, t + 0.25);
+        osc.frequency.setValueAtTime(freq, chirpStart);
+        osc.frequency.linearRampToValueAtTime(endFreq, chirpStart + chirpDur);
+        g.gain.setValueAtTime(0, chirpStart);
+        g.gain.linearRampToValueAtTime(0.04 + Math.random() * 0.03, chirpStart + chirpDur * 0.15);
+        g.gain.setValueAtTime(0.04 + Math.random() * 0.02, chirpStart + chirpDur * 0.7);
+        g.gain.linearRampToValueAtTime(0, chirpStart + chirpDur);
         osc.connect(g);
-        g.connect(birdsGainRef.current || ctx.destination);
-        osc.start(t);
-        osc.stop(t + 0.3);
-        const id = window.setTimeout(scheduleBird, 1500 + Math.random() * 6000);
-        ambientIntervalsRef.current.push(id);
-      };
-      if (birdsGainRef.current) birdsGainRef.current.gain.setTargetAtTime(1, now, 0.5);
-      scheduleBird();
-    } else if (birdsGainRef.current) {
-      birdsGainRef.current.gain.setTargetAtTime(0, now, 0.5);
-    }
+        g.connect(mixGain);
+        osc.start(chirpStart);
+        osc.stop(chirpStart + chirpDur + 0.01);
+      }
 
-    if (has("chanting")) {
-      const scheduleChant = () => {
-        if (ctx.state !== "running" || !activeAmbients.includes("chanting")) return;
-        const t = ctx.currentTime;
-        const baseFreq = 110; // Low A
-        const harmonics = [1, 1.5, 2, 3];
-        harmonics.forEach(h => {
+      if (Math.random() > 0.6) {
+        const trillStart = now + numChirps * 0.2 + Math.random() * 0.3;
+        const trillDur = 0.3 + Math.random() * 0.4;
+        const trillFreq = 3000 + Math.random() * 2000;
+        const osc2 = ctx.createOscillator();
+        const g2 = ctx.createGain();
+        const lfo = ctx.createOscillator();
+        const lfoGain = ctx.createGain();
+        lfo.frequency.value = 20 + Math.random() * 15;
+        lfoGain.gain.value = trillFreq * 0.05;
+        lfo.connect(lfoGain);
+        lfoGain.connect(osc2.frequency);
+        osc2.type = "sine";
+        osc2.frequency.setValueAtTime(trillFreq, trillStart);
+        g2.gain.setValueAtTime(0, trillStart);
+        g2.gain.linearRampToValueAtTime(0.025, trillStart + 0.05);
+        g2.gain.setValueAtTime(0.02, trillStart + trillDur * 0.8);
+        g2.gain.linearRampToValueAtTime(0, trillStart + trillDur);
+        osc2.connect(g2);
+        g2.connect(mixGain);
+        osc2.start(trillStart);
+        osc2.stop(trillStart + trillDur + 0.01);
+        lfo.start(trillStart);
+        lfo.stop(trillStart + trillDur + 0.01);
+      }
+
+      const nextDelay = 1200 + Math.random() * 4000;
+      const id = window.setTimeout(scheduleChirpGroup, nextDelay);
+      const ids = ambientIntervalsRef.current.get("birds") || [];
+      ids.push(id);
+      ambientIntervalsRef.current.set("birds", ids);
+    };
+    scheduleChirpGroup();
+
+    return () => {
+      (ambientIntervalsRef.current.get("birds") || []).forEach(clearTimeout);
+      ambientIntervalsRef.current.set("birds", []);
+    };
+  }, [isPlaying, ambientVolumes.birds > 0]);
+
+  // Chanting - Tibetan bowl + vocal drone
+  useEffect(() => {
+    if (!isPlaying || !audioContextRef.current || ambientVolumes.chanting === 0) return;
+    const ctx = audioContextRef.current;
+    const mixGain = ambientGainsRef.current.chanting;
+    if (!mixGain) return;
+
+    const scheduleBowlAndChant = () => {
+      if (ctx.state !== "running") return;
+      const now = ctx.currentTime;
+
+      const bowlFreq = [293.66, 329.63, 392, 440, 523.25][Math.floor(Math.random() * 5)];
+      const bowlDur = 6 + Math.random() * 4;
+      const harmonics = [1, 2.76, 4.72, 6.83];
+      harmonics.forEach((h, idx) => {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(bowlFreq * h, now);
+        const vol = 0.04 / (idx + 1);
+        g.gain.setValueAtTime(0, now);
+        g.gain.linearRampToValueAtTime(vol, now + 0.3);
+        g.gain.setValueAtTime(vol * 0.8, now + bowlDur * 0.3);
+        g.gain.linearRampToValueAtTime(0, now + bowlDur);
+        osc.connect(g);
+        g.connect(mixGain);
+        osc.start(now);
+        osc.stop(now + bowlDur + 0.1);
+      });
+
+      if (Math.random() > 0.4) {
+        const droneStart = now + 1 + Math.random() * 2;
+        const droneDur = 4 + Math.random() * 3;
+        const droneFreq = [110, 130.81, 146.83, 164.81][Math.floor(Math.random() * 4)];
+        [1, 1.5, 2, 3].forEach((h, idx) => {
           const osc = ctx.createOscillator();
           const g = ctx.createGain();
           osc.type = "sine";
-          osc.frequency.setValueAtTime(baseFreq * h, t);
-          osc.frequency.linearRampToValueAtTime(baseFreq * h * (1 + Math.random() * 0.02), t + 3);
-          const vol = 0.03 / h;
-          g.gain.setValueAtTime(0, t);
-          g.gain.linearRampToValueAtTime(vol, t + 1.5);
-          g.gain.linearRampToValueAtTime(0, t + 5);
+          osc.frequency.setValueAtTime(droneFreq * h, droneStart);
+          osc.frequency.linearRampToValueAtTime(droneFreq * h * (1 + Math.random() * 0.015), droneStart + droneDur);
+          const vol = 0.025 / (idx + 1);
+          g.gain.setValueAtTime(0, droneStart);
+          g.gain.linearRampToValueAtTime(vol, droneStart + droneDur * 0.3);
+          g.gain.linearRampToValueAtTime(vol * 0.9, droneStart + droneDur * 0.7);
+          g.gain.linearRampToValueAtTime(0, droneStart + droneDur);
           osc.connect(g);
-          g.connect(chantingGainRef.current || ctx.destination);
-          osc.start(t);
-          osc.stop(t + 5.1);
+          g.connect(mixGain);
+          osc.start(droneStart);
+          osc.stop(droneStart + droneDur + 0.1);
         });
-        const id = window.setTimeout(scheduleChant, 5000 + Math.random() * 2000);
-        ambientIntervalsRef.current.push(id);
-      };
-      if (chantingGainRef.current) chantingGainRef.current.gain.setTargetAtTime(1, now, 0.5);
-      scheduleChant();
-    } else if (chantingGainRef.current) {
-      chantingGainRef.current.gain.setTargetAtTime(0, now, 0.5);
-    }
+      }
 
-    if (has("purring")) {
-      const schedulePurr = () => {
-        if (ctx.state !== "running" || !activeAmbients.includes("purring")) return;
-        const t = ctx.currentTime;
-        const osc = ctx.createOscillator();
-        const g = ctx.createGain();
-        osc.type = "sawtooth";
-        osc.frequency.setValueAtTime(25, t);
-        const lpf = ctx.createBiquadFilter();
-        lpf.type = "lowpass";
-        lpf.frequency.value = 80;
-        g.gain.setValueAtTime(0, t);
-        for (let i = 0; i < 6; i++) {
-          g.gain.linearRampToValueAtTime(0.08, t + i * 0.8 + 0.15);
-          g.gain.linearRampToValueAtTime(0.02, t + i * 0.8 + 0.45);
-        }
-        g.gain.linearRampToValueAtTime(0, t + 5);
-        osc.connect(lpf);
-        lpf.connect(g);
-        g.connect(purringGainRef.current || ctx.destination);
-        osc.start(t);
-        osc.stop(t + 5.1);
-        const id = window.setTimeout(schedulePurr, 5200);
-        ambientIntervalsRef.current.push(id);
-      };
-      if (purringGainRef.current) purringGainRef.current.gain.setTargetAtTime(1, now, 0.5);
-      schedulePurr();
-    } else if (purringGainRef.current) {
-      purringGainRef.current.gain.setTargetAtTime(0, now, 0.5);
-    }
+      const nextDelay = 5000 + Math.random() * 4000;
+      const id = window.setTimeout(scheduleBowlAndChant, nextDelay);
+      const ids = ambientIntervalsRef.current.get("chanting") || [];
+      ids.push(id);
+      ambientIntervalsRef.current.set("chanting", ids);
+    };
+    scheduleBowlAndChant();
 
     return () => {
-      ambientIntervalsRef.current.forEach(id => clearTimeout(id));
-      ambientIntervalsRef.current = [];
+      (ambientIntervalsRef.current.get("chanting") || []).forEach(clearTimeout);
+      ambientIntervalsRef.current.set("chanting", []);
     };
-  }, [isPlaying, activeAmbients]);
+  }, [isPlaying, ambientVolumes.chanting > 0]);
+
+  // Purring - rhythmic low-frequency oscillation
+  useEffect(() => {
+    if (!isPlaying || !audioContextRef.current || ambientVolumes.purring === 0) return;
+    const ctx = audioContextRef.current;
+    const mixGain = ambientGainsRef.current.purring;
+    if (!mixGain) return;
+
+    const schedulePurrCycle = () => {
+      if (ctx.state !== "running") return;
+      const now = ctx.currentTime;
+      const cycleDur = 4 + Math.random() * 2;
+      const numPulses = Math.floor(cycleDur / 0.6);
+
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      const lpf = ctx.createBiquadFilter();
+      lpf.type = "lowpass";
+      lpf.frequency.value = 100;
+
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(25 + Math.random() * 3, now);
+
+      g.gain.setValueAtTime(0, now);
+      for (let i = 0; i < numPulses; i++) {
+        const t = now + i * 0.6;
+        g.gain.linearRampToValueAtTime(0.12, t + 0.12);
+        g.gain.linearRampToValueAtTime(0.03, t + 0.35);
+      }
+      g.gain.linearRampToValueAtTime(0, now + cycleDur);
+
+      osc.connect(lpf);
+      lpf.connect(g);
+      g.connect(mixGain);
+      osc.start(now);
+      osc.stop(now + cycleDur + 0.1);
+
+      const gap = Math.random() > 0.7 ? 1 + Math.random() * 2 : 0.3;
+      const id = window.setTimeout(schedulePurrCycle, (cycleDur + gap) * 1000);
+      const ids = ambientIntervalsRef.current.get("purring") || [];
+      ids.push(id);
+      ambientIntervalsRef.current.set("purring", ids);
+    };
+    schedulePurrCycle();
+
+    return () => {
+      (ambientIntervalsRef.current.get("purring") || []).forEach(clearTimeout);
+      ambientIntervalsRef.current.set("purring", []);
+    };
+  }, [isPlaying, ambientVolumes.purring > 0]);
+
+  // Coffee shop modulation (clinks and murmur swells)
+  useEffect(() => {
+    if (!isPlaying || !audioContextRef.current || ambientVolumes.coffee === 0) return;
+    const ctx = audioContextRef.current;
+    const mixGain = ambientGainsRef.current.coffee;
+    if (!mixGain) return;
+
+    const scheduleCoffeeSwell = () => {
+      if (ctx.state !== "running") return;
+      const now = ctx.currentTime;
+
+      const dur = 3 + Math.random() * 5;
+      const peak = 0.6 + Math.random() * 0.4;
+      const base = 0.3 + Math.random() * 0.2;
+      mixGain.gain.setValueAtTime(Math.max(0.01, mixGain.gain.value), now);
+      mixGain.gain.linearRampToValueAtTime(peak, now + dur * 0.4);
+      mixGain.gain.linearRampToValueAtTime(base, now + dur);
+
+      if (Math.random() > 0.6) {
+        const clinkTime = now + Math.random() * dur;
+        const clinkFreq = 3000 + Math.random() * 3000;
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(clinkFreq, clinkTime);
+        osc.frequency.linearRampToValueAtTime(clinkFreq * 0.7, clinkTime + 0.15);
+        g.gain.setValueAtTime(0, clinkTime);
+        g.gain.linearRampToValueAtTime(0.015, clinkTime + 0.005);
+        g.gain.linearRampToValueAtTime(0, clinkTime + 0.15);
+        osc.connect(g);
+        g.connect(mixGain);
+        osc.start(clinkTime);
+        osc.stop(clinkTime + 0.2);
+      }
+
+      const id = window.setTimeout(scheduleCoffeeSwell, dur * 1000);
+      const ids = ambientIntervalsRef.current.get("coffee") || [];
+      ids.push(id);
+      ambientIntervalsRef.current.set("coffee", ids);
+    };
+    scheduleCoffeeSwell();
+
+    return () => {
+      (ambientIntervalsRef.current.get("coffee") || []).forEach(clearTimeout);
+      ambientIntervalsRef.current.set("coffee", []);
+    };
+  }, [isPlaying, ambientVolumes.coffee > 0]);
+
+  // Forest modulation
+  useEffect(() => {
+    if (!isPlaying || !audioContextRef.current || ambientVolumes.forest === 0) return;
+    const ctx = audioContextRef.current;
+    const mixGain = ambientGainsRef.current.forest;
+    if (!mixGain) return;
+
+    const scheduleForestSway = () => {
+      if (ctx.state !== "running") return;
+      const now = ctx.currentTime;
+      const dur = 5 + Math.random() * 8;
+      const peak = 0.5 + Math.random() * 0.5;
+      const base = 0.2 + Math.random() * 0.2;
+      mixGain.gain.setValueAtTime(Math.max(0.01, mixGain.gain.value), now);
+      mixGain.gain.linearRampToValueAtTime(peak, now + dur * 0.5);
+      mixGain.gain.linearRampToValueAtTime(base, now + dur);
+      const id = window.setTimeout(scheduleForestSway, dur * 1000);
+      const ids = ambientIntervalsRef.current.get("forest") || [];
+      ids.push(id);
+      ambientIntervalsRef.current.set("forest", ids);
+    };
+    scheduleForestSway();
+
+    return () => {
+      (ambientIntervalsRef.current.get("forest") || []).forEach(clearTimeout);
+      ambientIntervalsRef.current.set("forest", []);
+    };
+  }, [isPlaying, ambientVolumes.forest > 0]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -429,21 +871,15 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbients: Amb
     setWaveIntensityState(val);
   };
 
-  const toggleAmbient = (sound: AmbientSound) => {
-    setActiveAmbients(prev =>
-      prev.includes(sound) ? prev.filter(s => s !== sound) : [...prev, sound]
-    );
-  };
-
   return {
     isPlaying,
     volume,
     waveIntensity,
-    activeAmbients,
+    ambientVolumes,
     togglePlay,
     setVolume,
     setWaveIntensity,
-    toggleAmbient,
+    setAmbientVolume,
     stopWithFade,
   };
 }
