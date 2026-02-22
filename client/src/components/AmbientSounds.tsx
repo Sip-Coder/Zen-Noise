@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { CloudRain, Coffee, CloudLightning, Wind, Bird, Flame, Music, Cat, TreePine } from "lucide-react";
+import { CloudRain, Coffee, CloudLightning, Wind, Bird, Flame, Bell, Cat, TreePine } from "lucide-react";
 import type { AmbientSound, AmbientVolumes } from "@/hooks/use-audio-engine";
 
 interface AmbientSoundsProps {
@@ -14,7 +14,7 @@ const AMBIENT_OPTIONS: { value: AmbientSound; label: string; icon: typeof CloudR
   { value: "wind", label: "Wind", icon: Wind, color: "from-teal-500/20 to-teal-600/5" },
   { value: "birds", label: "Birds", icon: Bird, color: "from-green-500/20 to-green-600/5" },
   { value: "campfire", label: "Fire", icon: Flame, color: "from-orange-500/20 to-orange-600/5" },
-  { value: "chanting", label: "Chant", icon: Music, color: "from-indigo-500/20 to-indigo-600/5" },
+  { value: "ring", label: "Ring", icon: Bell, color: "from-indigo-500/20 to-indigo-600/5" },
   { value: "purring", label: "Cats", icon: Cat, color: "from-pink-500/20 to-pink-600/5" },
   { value: "forest", label: "Forest", icon: TreePine, color: "from-emerald-500/20 to-emerald-600/5" },
 ];
@@ -26,7 +26,7 @@ const ACTIVE_COLORS: Record<AmbientSound, string> = {
   wind: "text-teal-400",
   birds: "text-green-400",
   campfire: "text-orange-400",
-  chanting: "text-indigo-400",
+  ring: "text-indigo-400",
   purring: "text-pink-400",
   forest: "text-emerald-400",
 };
@@ -38,7 +38,7 @@ const ACTIVE_BG: Record<AmbientSound, string> = {
   wind: "bg-teal-500",
   birds: "bg-green-500",
   campfire: "bg-orange-500",
-  chanting: "bg-indigo-500",
+  ring: "bg-indigo-500",
   purring: "bg-pink-500",
   forest: "bg-emerald-500",
 };

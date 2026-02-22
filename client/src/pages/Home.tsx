@@ -20,7 +20,7 @@ import {
 
 const DEFAULT_AMBIENT_VOLUMES: AmbientVolumes = {
   rain: 0, coffee: 0, thunder: 0, wind: 0, birds: 0,
-  campfire: 0, chanting: 0, purring: 0, forest: 0,
+  campfire: 0, ring: 0, purring: 0, forest: 0,
 };
 
 function loadSavedAmbientVolumes(): AmbientVolumes {
