@@ -10,15 +10,9 @@ interface WaveControlProps {
 
 export function WaveControl({ value, onChange }: WaveControlProps) {
   const options: { value: WaveIntensity; label: string }[] = [
-    { value: "off", label: "Steady" },
-    { value: "low", label: "Gentle" },
-    { value: "medium", label: "Deep" },
-    { value: "rain", label: "Rain" },
-    { value: "coffee", label: "Coffee" },
-    { value: "thunder", label: "Storm" },
-    { value: "wind", label: "Wind" },
-    { value: "birds", label: "Birds" },
-    { value: "campfire", label: "Fire" },
+    { value: "steady", label: "Steady" },
+    { value: "gentle", label: "Gentle" },
+    { value: "deep", label: "Deep" },
   ];
 
   return (
@@ -26,18 +20,19 @@ export function WaveControl({ value, onChange }: WaveControlProps) {
       <div className="flex items-center justify-between text-muted-foreground mb-4">
         <div className="flex items-center gap-2">
             <Waves className="w-4 h-4" />
-            <span className="text-sm font-medium uppercase tracking-widest">Ambient Effects</span>
+            <span className="text-sm font-medium uppercase tracking-widest">Wave Intensity</span>
         </div>
-        <span className="text-xs opacity-50">Procedural Synthesis</span>
+        <span className="text-xs opacity-50">Brown Noise Base</span>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 p-1 bg-secondary/50 rounded-2xl border border-white/5 relative">
+      <div className="flex p-1 bg-secondary/50 rounded-2xl border border-white/5 relative">
         {options.map((opt) => (
           <button
             key={opt.value}
+            data-testid={`btn-wave-${opt.value}`}
             onClick={() => onChange(opt.value)}
             className={cn(
-              "py-3 text-sm font-medium rounded-xl relative z-10 transition-colors duration-200",
+              "flex-1 py-3 text-sm font-medium rounded-xl relative z-10 transition-colors duration-200",
               value === opt.value ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
             )}
           >
