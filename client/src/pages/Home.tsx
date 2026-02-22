@@ -26,7 +26,15 @@ const DEFAULT_AMBIENT_VOLUMES: AmbientVolumes = {
 function loadSavedAmbientVolumes(): AmbientVolumes {
   try {
     const saved = localStorage.getItem('zen_ambient_volumes');
-    if (saved) return { ...DEFAULT_AMBIENT_VOLUMES, ...JSON.parse(saved) };
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if ('chanting' in parsed && !('ring' in parsed)) {
+        parsed.ring = parsed.chanting;
+        delete parsed.chanting;
+        localStorage.setItem('zen_ambient_volumes', JSON.stringify(parsed));
+      }
+      return { ...DEFAULT_AMBIENT_VOLUMES, ...parsed };
+    }
   } catch {}
   return { ...DEFAULT_AMBIENT_VOLUMES };
 }
