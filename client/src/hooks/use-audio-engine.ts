@@ -184,37 +184,24 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
     rainG2.connect(rainMix);
     rainSrc2.start();
 
-    // === COFFEE: Bandpass brown noise + muffled pink noise for murmur ===
+    // === COFFEE: Improved murmur and clinks ===
     const coffeeMix = createAmbientChannel("coffee");
-    const coffeeSrc = ctx.createBufferSource();
-    coffeeSrc.buffer = brownBuffer;
-    coffeeSrc.loop = true;
-    const coffeeBP = ctx.createBiquadFilter();
-    coffeeBP.type = "bandpass";
-    coffeeBP.frequency.value = 800;
-    coffeeBP.Q.value = 0.4;
-    const coffeeGain1 = ctx.createGain();
-    coffeeGain1.gain.value = 0.5;
-    coffeeSrc.connect(coffeeBP);
-    coffeeBP.connect(coffeeGain1);
-    coffeeGain1.connect(coffeeMix);
-    coffeeSrc.start();
-    const coffeeSrc2 = ctx.createBufferSource();
-    coffeeSrc2.buffer = pinkBuffer;
-    coffeeSrc2.loop = true;
+    const coffeeMurmurSrc = ctx.createBufferSource();
+    coffeeMurmurSrc.buffer = pinkBuffer;
+    coffeeMurmurSrc.loop = true;
     const coffeeLP = ctx.createBiquadFilter();
     coffeeLP.type = "lowpass";
-    coffeeLP.frequency.value = 2500;
+    coffeeLP.frequency.value = 1200;
     const coffeeHP = ctx.createBiquadFilter();
     coffeeHP.type = "highpass";
-    coffeeHP.frequency.value = 300;
-    const coffeeGain2 = ctx.createGain();
-    coffeeGain2.gain.value = 0.6;
-    coffeeSrc2.connect(coffeeHP);
-    coffeeHP.connect(coffeeLP);
-    coffeeLP.connect(coffeeGain2);
-    coffeeGain2.connect(coffeeMix);
-    coffeeSrc2.start();
+    coffeeHP.frequency.value = 200;
+    const coffeeMurmurGain = ctx.createGain();
+    coffeeMurmurGain.gain.value = 0.7;
+    coffeeMurmurSrc.connect(coffeeLP);
+    coffeeLP.connect(coffeeHP);
+    coffeeHP.connect(coffeeMurmurGain);
+    coffeeMurmurGain.connect(coffeeMix);
+    coffeeMurmurSrc.start();
 
     // === WIND: Low-frequency filtered noise with slow modulation ===
     const windMix = createAmbientChannel("wind");
@@ -245,106 +232,49 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
     windLeafGain.connect(windMix);
     windSrc2.start();
 
-    // === FOREST: Layered filtered noise (leaves + canopy) ===
+    // === FOREST: Improved canopy and rustle ===
     const forestMix = createAmbientChannel("forest");
-    const forestSrc = ctx.createBufferSource();
-    forestSrc.buffer = pinkBuffer;
-    forestSrc.loop = true;
-    const forestBP = ctx.createBiquadFilter();
-    forestBP.type = "bandpass";
-    forestBP.frequency.value = 2500;
-    forestBP.Q.value = 0.3;
-    const forestG1 = ctx.createGain();
-    forestG1.gain.value = 0.5;
-    forestSrc.connect(forestBP);
-    forestBP.connect(forestG1);
-    forestG1.connect(forestMix);
-    forestSrc.start();
-    const forestSrc2 = ctx.createBufferSource();
-    forestSrc2.buffer = whiteBuffer;
-    forestSrc2.loop = true;
-    const forestHP = ctx.createBiquadFilter();
-    forestHP.type = "highpass";
-    forestHP.frequency.value = 4000;
-    const forestG2 = ctx.createGain();
-    forestG2.gain.value = 0.15;
-    forestSrc2.connect(forestHP);
-    forestHP.connect(forestG2);
-    forestG2.connect(forestMix);
-    forestSrc2.start();
-    const forestSrc3 = ctx.createBufferSource();
-    forestSrc3.buffer = brownBuffer;
-    forestSrc3.loop = true;
+    const forestCanopySrc = ctx.createBufferSource();
+    forestCanopySrc.buffer = pinkBuffer;
+    forestCanopySrc.loop = true;
     const forestLP = ctx.createBiquadFilter();
     forestLP.type = "lowpass";
-    forestLP.frequency.value = 500;
-    const forestG3 = ctx.createGain();
-    forestG3.gain.value = 0.2;
-    forestSrc3.connect(forestLP);
-    forestLP.connect(forestG3);
-    forestG3.connect(forestMix);
-    forestSrc3.start();
+    forestLP.frequency.value = 1500;
+    const forestCanopyGain = ctx.createGain();
+    forestCanopyGain.gain.value = 0.4;
+    forestCanopySrc.connect(forestLP);
+    forestLP.connect(forestCanopyGain);
+    forestCanopyGain.connect(forestMix);
+    forestCanopySrc.start();
 
-    // === CAMPFIRE: Crackling noise + low rumble ===
+    // === CAMPFIRE: Improved crackle and rumble ===
     const fireMix = createAmbientChannel("campfire");
-    const fireSrc = ctx.createBufferSource();
-    fireSrc.buffer = whiteBuffer;
-    fireSrc.loop = true;
-    const fireHP = ctx.createBiquadFilter();
-    fireHP.type = "highpass";
-    fireHP.frequency.value = 2000;
-    const firePeak = ctx.createBiquadFilter();
-    firePeak.type = "peaking";
-    firePeak.frequency.value = 4000;
-    firePeak.gain.value = 6;
-    firePeak.Q.value = 1;
-    const fireG1 = ctx.createGain();
-    fireG1.gain.value = 0.3;
-    fireSrc.connect(fireHP);
-    fireHP.connect(firePeak);
-    firePeak.connect(fireG1);
-    fireG1.connect(fireMix);
-    fireSrc.start();
-    const fireBaseSrc = ctx.createBufferSource();
-    fireBaseSrc.buffer = brownBuffer;
-    fireBaseSrc.loop = true;
+    const fireRumbleSrc = ctx.createBufferSource();
+    fireRumbleSrc.buffer = brownBuffer;
+    fireRumbleSrc.loop = true;
     const fireLP = ctx.createBiquadFilter();
     fireLP.type = "lowpass";
-    fireLP.frequency.value = 800;
-    const fireG2 = ctx.createGain();
-    fireG2.gain.value = 0.4;
-    fireBaseSrc.connect(fireLP);
-    fireLP.connect(fireG2);
-    fireG2.connect(fireMix);
-    fireBaseSrc.start();
+    fireLP.frequency.value = 500;
+    const fireRumbleGain = ctx.createGain();
+    fireRumbleGain.gain.value = 0.3;
+    fireRumbleSrc.connect(fireLP);
+    fireLP.connect(fireRumbleGain);
+    fireRumbleGain.connect(fireMix);
+    fireRumbleSrc.start();
 
-    // === THUNDER: Low rumble noise source (scheduled envelopes in effect) ===
+    // === THUNDER: Improved rumbling ===
     const thunderMix = createAmbientChannel("thunder");
-    const thunderSrc = ctx.createBufferSource();
-    thunderSrc.buffer = brownBuffer;
-    thunderSrc.loop = true;
+    const thunderRumbleSrc = ctx.createBufferSource();
+    thunderRumbleSrc.buffer = brownBuffer;
+    thunderRumbleSrc.loop = true;
     const thunderLP = ctx.createBiquadFilter();
     thunderLP.type = "lowpass";
-    thunderLP.frequency.value = 150;
-    const thunderLP2 = ctx.createBiquadFilter();
-    thunderLP2.type = "lowpass";
-    thunderLP2.frequency.value = 250;
-    thunderSrc.connect(thunderLP);
-    thunderLP.connect(thunderLP2);
-    thunderLP2.connect(thunderMix);
-    thunderSrc.start();
-    const thunderRumbleSrc = ctx.createBufferSource();
-    thunderRumbleSrc.buffer = pinkBuffer;
-    thunderRumbleSrc.loop = true;
-    const thunderBP = ctx.createBiquadFilter();
-    thunderBP.type = "bandpass";
-    thunderBP.frequency.value = 80;
-    thunderBP.Q.value = 0.5;
-    const thunderG2 = ctx.createGain();
-    thunderG2.gain.value = 0.3;
-    thunderRumbleSrc.connect(thunderBP);
-    thunderBP.connect(thunderG2);
-    thunderG2.connect(thunderMix);
+    thunderLP.frequency.value = 100;
+    const thunderGain = ctx.createGain();
+    thunderGain.gain.value = 0.4;
+    thunderRumbleSrc.connect(thunderLP);
+    thunderLP.connect(thunderGain);
+    thunderGain.connect(thunderMix);
     thunderRumbleSrc.start();
 
     // === BIRDS: Oscillator-based (scheduled in effect) ===
@@ -780,47 +710,49 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
     };
   }, [isPlaying, ambientVolumes.purring > 0]);
 
-  // Coffee shop modulation (clinks and murmur swells)
+  // Coffee shop modulation (clinks, murmurs, footsteps)
   useEffect(() => {
     if (!isPlaying || !audioContextRef.current || ambientVolumes.coffee === 0) return;
     const ctx = audioContextRef.current;
     const mixGain = ambientGainsRef.current.coffee;
     if (!mixGain) return;
 
-    const scheduleCoffeeSwell = () => {
+    const scheduleCoffeeEvent = () => {
       if (ctx.state !== "running") return;
       const now = ctx.currentTime;
+      const rand = Math.random();
 
-      const dur = 3 + Math.random() * 5;
-      const peak = 0.6 + Math.random() * 0.4;
-      const base = 0.3 + Math.random() * 0.2;
-      mixGain.gain.setValueAtTime(Math.max(0.01, mixGain.gain.value), now);
-      mixGain.gain.linearRampToValueAtTime(peak, now + dur * 0.4);
-      mixGain.gain.linearRampToValueAtTime(base, now + dur);
-
-      if (Math.random() > 0.6) {
-        const clinkTime = now + Math.random() * dur;
-        const clinkFreq = 3000 + Math.random() * 3000;
+      if (rand > 0.6) {
+        // Clink
+        const clinkFreq = 2500 + Math.random() * 4000;
         const osc = ctx.createOscillator();
         const g = ctx.createGain();
         osc.type = "sine";
-        osc.frequency.setValueAtTime(clinkFreq, clinkTime);
-        osc.frequency.linearRampToValueAtTime(clinkFreq * 0.7, clinkTime + 0.15);
-        g.gain.setValueAtTime(0, clinkTime);
-        g.gain.linearRampToValueAtTime(0.015, clinkTime + 0.005);
-        g.gain.linearRampToValueAtTime(0, clinkTime + 0.15);
+        osc.frequency.setValueAtTime(clinkFreq, now);
+        osc.frequency.exponentialRampToValueAtTime(clinkFreq * 0.8, now + 0.1);
+        g.gain.setValueAtTime(0, now);
+        g.gain.linearRampToValueAtTime(0.01 + Math.random() * 0.015, now + 0.005);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
         osc.connect(g);
         g.connect(mixGain);
-        osc.start(clinkTime);
-        osc.stop(clinkTime + 0.2);
+        osc.start(now);
+        osc.stop(now + 0.25);
+      } else if (rand > 0.3) {
+        // Footstep/Murmur swell
+        const swellDur = 0.5 + Math.random() * 1.5;
+        const peak = 0.4 + Math.random() * 0.4;
+        mixGain.gain.cancelScheduledValues(now);
+        mixGain.gain.setValueAtTime(mixGain.gain.value, now);
+        mixGain.gain.linearRampToValueAtTime(peak, now + swellDur * 0.4);
+        mixGain.gain.linearRampToValueAtTime(0.2, now + swellDur);
       }
 
-      const id = window.setTimeout(scheduleCoffeeSwell, dur * 1000);
+      const id = window.setTimeout(scheduleCoffeeEvent, 500 + Math.random() * 3000);
       const ids = ambientIntervalsRef.current.get("coffee") || [];
       ids.push(id);
       ambientIntervalsRef.current.set("coffee", ids);
     };
-    scheduleCoffeeSwell();
+    scheduleCoffeeEvent();
 
     return () => {
       (ambientIntervalsRef.current.get("coffee") || []).forEach(clearTimeout);
@@ -828,28 +760,41 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
     };
   }, [isPlaying, ambientVolumes.coffee > 0]);
 
-  // Forest modulation
+  // Forest modulation (leaf rustles and wind in trees)
   useEffect(() => {
     if (!isPlaying || !audioContextRef.current || ambientVolumes.forest === 0) return;
     const ctx = audioContextRef.current;
     const mixGain = ambientGainsRef.current.forest;
     if (!mixGain) return;
 
-    const scheduleForestSway = () => {
+    const scheduleForestEvent = () => {
       if (ctx.state !== "running") return;
       const now = ctx.currentTime;
-      const dur = 5 + Math.random() * 8;
-      const peak = 0.5 + Math.random() * 0.5;
-      const base = 0.2 + Math.random() * 0.2;
-      mixGain.gain.setValueAtTime(Math.max(0.01, mixGain.gain.value), now);
-      mixGain.gain.linearRampToValueAtTime(peak, now + dur * 0.5);
-      mixGain.gain.linearRampToValueAtTime(base, now + dur);
-      const id = window.setTimeout(scheduleForestSway, dur * 1000);
+
+      if (Math.random() > 0.5) {
+        // Rustle
+        const osc = ctx.createBufferSource();
+        osc.buffer = createPinkNoiseBuffer(ctx, 0.5);
+        const g = ctx.createGain();
+        const bp = ctx.createBiquadFilter();
+        bp.type = "bandpass";
+        bp.frequency.value = 2000 + Math.random() * 2000;
+        bp.Q.value = 0.5;
+        g.gain.setValueAtTime(0, now);
+        g.gain.linearRampToValueAtTime(0.05 + Math.random() * 0.1, now + 0.1);
+        g.gain.linearRampToValueAtTime(0, now + 0.5);
+        osc.connect(bp);
+        bp.connect(g);
+        g.connect(mixGain);
+        osc.start(now);
+      }
+
+      const id = window.setTimeout(scheduleForestEvent, 2000 + Math.random() * 5000);
       const ids = ambientIntervalsRef.current.get("forest") || [];
       ids.push(id);
       ambientIntervalsRef.current.set("forest", ids);
     };
-    scheduleForestSway();
+    scheduleForestEvent();
 
     return () => {
       (ambientIntervalsRef.current.get("forest") || []).forEach(clearTimeout);
