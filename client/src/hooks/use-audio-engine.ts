@@ -377,6 +377,7 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
         album: "Focus & Rest",
         artwork: [
           { src: "/favicon.png", sizes: "192x192", type: "image/png" },
+          { src: "/favicon.png", sizes: "512x512", type: "image/png" },
         ],
       });
       navigator.mediaSession.setActionHandler("play", () => togglePlay());
