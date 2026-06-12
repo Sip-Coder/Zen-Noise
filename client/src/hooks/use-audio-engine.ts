@@ -74,6 +74,79 @@ function createPinkNoiseBuffer(ctx: AudioContext, seconds: number): AudioBuffer 
   return buffer;
 }
 
+function randomBetween(min: number, max: number): number {
+  return min + Math.random() * (max - min);
+}
+
+function randomChoice<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+type NoiseColor = "white" | "pink" | "brown";
+
+interface FilterSpec {
+  type: BiquadFilterType;
+  frequency: number;
+  q?: number;
+  gain?: number;
+}
+
+interface NoiseBurstOptions {
+  startTime: number;
+  duration: number;
+  peak: number;
+  attack?: number;
+  noise?: NoiseColor;
+  filters?: FilterSpec[];
+  pan?: number;
+}
+
+function createNoiseBuffer(ctx: AudioContext, color: NoiseColor, seconds: number): AudioBuffer {
+  if (color === "brown") return createBrownNoiseBuffer(ctx, seconds);
+  if (color === "pink") return createPinkNoiseBuffer(ctx, seconds);
+  return createWhiteNoiseBuffer(ctx, seconds);
+}
+
+function connectWithPan(ctx: AudioContext, node: AudioNode, destination: AudioNode, pan: number = 0) {
+  if (typeof ctx.createStereoPanner === "function" && Math.abs(pan) > 0.01) {
+    const panner = ctx.createStereoPanner();
+    panner.pan.value = Math.max(-1, Math.min(1, pan));
+    node.connect(panner);
+    panner.connect(destination);
+    return;
+  }
+  node.connect(destination);
+}
+
+function scheduleNoiseBurst(ctx: AudioContext, destination: AudioNode, options: NoiseBurstOptions) {
+  const source = ctx.createBufferSource();
+  source.buffer = createNoiseBuffer(ctx, options.noise ?? "white", Math.max(0.05, options.duration + 0.05));
+
+  let tail: AudioNode = source;
+  options.filters?.forEach((spec) => {
+    const filter = ctx.createBiquadFilter();
+    filter.type = spec.type;
+    filter.frequency.value = spec.frequency;
+    if (spec.q !== undefined) filter.Q.value = spec.q;
+    if (spec.gain !== undefined) filter.gain.value = spec.gain;
+    tail.connect(filter);
+    tail = filter;
+  });
+
+  const gain = ctx.createGain();
+  const attack = options.attack ?? Math.min(0.02, options.duration * 0.25);
+  const start = options.startTime;
+  const end = start + options.duration;
+  gain.gain.setValueAtTime(0.0001, start);
+  gain.gain.linearRampToValueAtTime(options.peak, start + attack);
+  gain.gain.exponentialRampToValueAtTime(0.0001, end);
+
+  tail.connect(gain);
+  connectWithPan(ctx, gain, destination, options.pan ?? 0);
+  source.start(start);
+  source.stop(end + 0.05);
+}
+
 export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolumes?: AmbientVolumes): AudioEngineState {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolumeState] = useState(initialVolume);
@@ -498,22 +571,35 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
       mixGain.gain.linearRampToValueAtTime(peak, now + dur * 0.4);
       mixGain.gain.linearRampToValueAtTime(base, now + dur);
 
-      if (Math.random() > 0.5) {
-        const dripTime = now + 1 + Math.random() * (dur - 2);
-        const dripBurst = ctx.createBufferSource();
-        dripBurst.buffer = createWhiteNoiseBuffer(ctx, 0.15);
-        const dripG = ctx.createGain();
-        const dripBP = ctx.createBiquadFilter();
-        dripBP.type = "bandpass";
-        dripBP.frequency.value = 3000 + Math.random() * 2000;
-        dripBP.Q.value = 1.5;
-        dripG.gain.setValueAtTime(0, dripTime);
-        dripG.gain.linearRampToValueAtTime(0.06 + Math.random() * 0.04, dripTime + 0.01);
-        dripG.gain.exponentialRampToValueAtTime(0.001, dripTime + 0.12);
-        dripBurst.connect(dripBP);
-        dripBP.connect(dripG);
-        dripG.connect(mixGain);
-        dripBurst.start(dripTime);
+      const dropCount = 5 + Math.floor(Math.random() * 10);
+      for (let i = 0; i < dropCount; i++) {
+        scheduleNoiseBurst(ctx, mixGain, {
+          startTime: now + randomBetween(0.4, dur - 0.4),
+          duration: randomBetween(0.035, 0.14),
+          peak: randomBetween(0.012, 0.045),
+          attack: randomBetween(0.002, 0.008),
+          noise: "white",
+          filters: [
+            { type: "highpass", frequency: randomBetween(900, 1800) },
+            { type: "bandpass", frequency: randomBetween(2300, 5400), q: randomBetween(0.7, 1.8) },
+          ],
+          pan: randomBetween(-0.85, 0.85),
+        });
+      }
+
+      if (Math.random() > 0.65) {
+        scheduleNoiseBurst(ctx, mixGain, {
+          startTime: now + randomBetween(1, dur - 1),
+          duration: randomBetween(0.16, 0.32),
+          peak: randomBetween(0.035, 0.07),
+          attack: 0.01,
+          noise: "pink",
+          filters: [
+            { type: "bandpass", frequency: randomBetween(450, 1100), q: randomBetween(0.7, 1.2) },
+            { type: "lowpass", frequency: randomBetween(1800, 2600) },
+          ],
+          pan: randomBetween(-0.55, 0.55),
+        });
       }
 
       const id = window.setTimeout(scheduleRainEvent, dur * 1000);
@@ -541,62 +627,93 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
       const now = ctx.currentTime;
       const rand = Math.random();
 
-      if (rand > 0.65) {
-        const clinkFreq = 2800 + Math.random() * 3500;
-        const osc = ctx.createOscillator();
-        const g = ctx.createGain();
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(clinkFreq, now);
-        osc.frequency.exponentialRampToValueAtTime(clinkFreq * 0.75, now + 0.08);
-        g.gain.setValueAtTime(0, now);
-        g.gain.linearRampToValueAtTime(0.012 + Math.random() * 0.018, now + 0.003);
-        g.gain.exponentialRampToValueAtTime(0.001, now + 0.15 + Math.random() * 0.1);
-        osc.connect(g);
-        g.connect(mixGain);
-        osc.start(now);
-        osc.stop(now + 0.3);
-
-        if (Math.random() > 0.5) {
-          const osc2 = ctx.createOscillator();
-          const g2 = ctx.createGain();
-          const f2 = clinkFreq * (1.2 + Math.random() * 0.3);
-          osc2.type = "sine";
-          osc2.frequency.setValueAtTime(f2, now + 0.02);
-          osc2.frequency.exponentialRampToValueAtTime(f2 * 0.7, now + 0.1);
-          g2.gain.setValueAtTime(0, now + 0.02);
-          g2.gain.linearRampToValueAtTime(0.008, now + 0.025);
-          g2.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-          osc2.connect(g2);
-          g2.connect(mixGain);
-          osc2.start(now + 0.02);
-          osc2.stop(now + 0.2);
-        }
-      } else if (rand > 0.35) {
-        const swellDur = 2 + Math.random() * 4;
-        const peak = 0.5 + Math.random() * 0.4;
-        const base = 0.2 + Math.random() * 0.15;
+      if (rand > 0.68) {
+        const pan = randomBetween(-0.7, 0.7);
+        const clinkFreq = randomBetween(2600, 6200);
+        const partials = [1, randomBetween(1.18, 1.38), randomBetween(1.9, 2.25)];
+        partials.forEach((partial, idx) => {
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          const start = now + idx * randomBetween(0.008, 0.024);
+          const freq = clinkFreq * partial;
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(freq, start);
+          osc.frequency.exponentialRampToValueAtTime(freq * randomBetween(0.62, 0.82), start + randomBetween(0.08, 0.18));
+          g.gain.setValueAtTime(0.0001, start);
+          g.gain.linearRampToValueAtTime((0.014 + Math.random() * 0.018) / (idx + 1), start + 0.004);
+          g.gain.exponentialRampToValueAtTime(0.0001, start + randomBetween(0.14, 0.32));
+          osc.connect(g);
+          connectWithPan(ctx, g, mixGain, pan + randomBetween(-0.08, 0.08));
+          osc.start(start);
+          osc.stop(start + 0.35);
+        });
+        scheduleNoiseBurst(ctx, mixGain, {
+          startTime: now,
+          duration: 0.035,
+          peak: 0.018,
+          attack: 0.002,
+          noise: "white",
+          filters: [
+            { type: "highpass", frequency: 3200 },
+            { type: "lowpass", frequency: 9000 },
+          ],
+          pan,
+        });
+      } else if (rand > 0.38) {
+        const phraseDur = randomBetween(0.9, 2.6);
+        const peak = randomBetween(0.35, 0.68);
+        const base = randomBetween(0.22, 0.34);
         mixGain.gain.cancelScheduledValues(now);
         mixGain.gain.setValueAtTime(Math.max(0.01, mixGain.gain.value), now);
-        mixGain.gain.linearRampToValueAtTime(peak, now + swellDur * 0.35);
-        mixGain.gain.linearRampToValueAtTime(base, now + swellDur);
+        mixGain.gain.linearRampToValueAtTime(peak, now + phraseDur * 0.35);
+        mixGain.gain.linearRampToValueAtTime(base, now + phraseDur);
+
+        const syllables = 3 + Math.floor(Math.random() * 5);
+        const pan = randomBetween(-0.8, 0.8);
+        for (let i = 0; i < syllables; i++) {
+          scheduleNoiseBurst(ctx, mixGain, {
+            startTime: now + randomBetween(0.05, phraseDur * 0.9),
+            duration: randomBetween(0.08, 0.22),
+            peak: randomBetween(0.018, 0.04),
+            attack: randomBetween(0.01, 0.03),
+            noise: "pink",
+            filters: [
+              { type: "highpass", frequency: randomBetween(160, 280) },
+              { type: "bandpass", frequency: randomBetween(420, 1600), q: randomBetween(0.5, 1.1) },
+              { type: "lowpass", frequency: randomBetween(1700, 2600) },
+            ],
+            pan: pan + randomBetween(-0.18, 0.18),
+          });
+        }
+      } else if (rand > 0.2) {
+        scheduleNoiseBurst(ctx, mixGain, {
+          startTime: now,
+          duration: randomBetween(0.45, 1.2),
+          peak: randomBetween(0.014, 0.032),
+          attack: randomBetween(0.08, 0.18),
+          noise: "white",
+          filters: [
+            { type: "highpass", frequency: randomBetween(1800, 2600) },
+            { type: "lowpass", frequency: randomBetween(5200, 7600) },
+          ],
+          pan: randomBetween(-0.75, 0.75),
+        });
       } else {
-        const stepBurst = ctx.createBufferSource();
-        stepBurst.buffer = createBrownNoiseBuffer(ctx, 0.2);
-        const stepG = ctx.createGain();
-        const stepBP = ctx.createBiquadFilter();
-        stepBP.type = "bandpass";
-        stepBP.frequency.value = 200 + Math.random() * 300;
-        stepBP.Q.value = 0.8;
-        stepG.gain.setValueAtTime(0, now);
-        stepG.gain.linearRampToValueAtTime(0.04 + Math.random() * 0.03, now + 0.02);
-        stepG.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-        stepBurst.connect(stepBP);
-        stepBP.connect(stepG);
-        stepG.connect(mixGain);
-        stepBurst.start(now);
+        scheduleNoiseBurst(ctx, mixGain, {
+          startTime: now,
+          duration: randomBetween(0.16, 0.34),
+          peak: randomBetween(0.024, 0.055),
+          attack: randomBetween(0.012, 0.025),
+          noise: "brown",
+          filters: [
+            { type: "bandpass", frequency: randomBetween(180, 520), q: randomBetween(0.6, 1.1) },
+            { type: "lowpass", frequency: 900 },
+          ],
+          pan: randomBetween(-0.65, 0.65),
+        });
       }
 
-      const id = window.setTimeout(scheduleCoffeeEvent, 800 + Math.random() * 3500);
+      const id = window.setTimeout(scheduleCoffeeEvent, randomBetween(550, 3200));
       const ids = ambientIntervalsRef.current.get("coffee") || [];
       ids.push(id);
       ambientIntervalsRef.current.set("coffee", ids);
@@ -627,22 +744,35 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
       mixGain.gain.linearRampToValueAtTime(peak, now + dur * 0.35);
       mixGain.gain.linearRampToValueAtTime(base, now + dur);
 
-      if (Math.random() > 0.4) {
-        const rustleTime = now + dur * 0.2 + Math.random() * dur * 0.5;
-        const rustleSrc = ctx.createBufferSource();
-        rustleSrc.buffer = createWhiteNoiseBuffer(ctx, 0.8);
-        const rG = ctx.createGain();
-        const rBP = ctx.createBiquadFilter();
-        rBP.type = "bandpass";
-        rBP.frequency.value = 2500 + Math.random() * 2000;
-        rBP.Q.value = 0.4;
-        rG.gain.setValueAtTime(0, rustleTime);
-        rG.gain.linearRampToValueAtTime(0.03 + Math.random() * 0.04, rustleTime + 0.15);
-        rG.gain.linearRampToValueAtTime(0, rustleTime + 0.6 + Math.random() * 0.4);
-        rustleSrc.connect(rBP);
-        rBP.connect(rG);
-        rG.connect(mixGain);
-        rustleSrc.start(rustleTime);
+      const rustleCount = 2 + Math.floor(Math.random() * 5);
+      for (let i = 0; i < rustleCount; i++) {
+        scheduleNoiseBurst(ctx, mixGain, {
+          startTime: now + dur * randomBetween(0.18, 0.82),
+          duration: randomBetween(0.35, 1.15),
+          peak: randomBetween(0.018, 0.055),
+          attack: randomBetween(0.08, 0.22),
+          noise: Math.random() > 0.4 ? "pink" : "white",
+          filters: [
+            { type: "highpass", frequency: randomBetween(900, 1500) },
+            { type: "bandpass", frequency: randomBetween(1800, 4200), q: randomBetween(0.25, 0.7) },
+          ],
+          pan: randomBetween(-0.95, 0.95),
+        });
+      }
+
+      if (Math.random() > 0.55) {
+        scheduleNoiseBurst(ctx, mixGain, {
+          startTime: now + dur * randomBetween(0.2, 0.55),
+          duration: randomBetween(1.4, 3.8),
+          peak: randomBetween(0.018, 0.045),
+          attack: randomBetween(0.35, 0.8),
+          noise: "pink",
+          filters: [
+            { type: "bandpass", frequency: randomBetween(520, 1200), q: randomBetween(0.18, 0.45) },
+            { type: "lowpass", frequency: randomBetween(1400, 2200) },
+          ],
+          pan: randomBetween(-0.6, 0.6),
+        });
       }
 
       const id = window.setTimeout(scheduleGust, dur * 1000);
@@ -671,16 +801,61 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
       if (ctx.state !== "running") return;
       const now = ctx.currentTime;
 
-      const isLoud = Math.random() > 0.6;
-      const intensity = isLoud ? (0.6 + Math.random() * 0.4) : (0.15 + Math.random() * 0.3);
-      const attack = isLoud ? (0.01 + Math.random() * 0.05) : (0.1 + Math.random() * 0.3);
-      const decay = isLoud ? (3 + Math.random() * 5) : (1.5 + Math.random() * 3);
+      const isClose = Math.random() > 0.72;
+      const intensity = isClose ? randomBetween(0.48, 0.75) : randomBetween(0.12, 0.32);
+      const attack = isClose ? randomBetween(0.025, 0.09) : randomBetween(0.16, 0.45);
+      const decay = isClose ? randomBetween(4.5, 8) : randomBetween(2.2, 5.2);
+      const pan = randomBetween(-0.35, 0.35);
 
       mixGain.gain.cancelScheduledValues(now);
       mixGain.gain.setValueAtTime(Math.max(0.01, mixGain.gain.value), now);
       mixGain.gain.linearRampToValueAtTime(intensity, now + attack);
 
-      if (isLoud && Math.random() > 0.5) {
+      scheduleNoiseBurst(ctx, mixGain, {
+        startTime: now,
+        duration: decay + randomBetween(0.4, 1.2),
+        peak: intensity * 0.22,
+        attack,
+        noise: "brown",
+        filters: [
+          { type: "lowpass", frequency: randomBetween(70, 125) },
+          { type: "peaking", frequency: randomBetween(45, 80), q: 0.8, gain: 4 },
+        ],
+        pan,
+      });
+
+      const rollCount = isClose ? 3 + Math.floor(Math.random() * 3) : 2 + Math.floor(Math.random() * 2);
+      for (let i = 0; i < rollCount; i++) {
+        scheduleNoiseBurst(ctx, mixGain, {
+          startTime: now + randomBetween(0.25, decay * 0.9),
+          duration: randomBetween(0.9, 2.6),
+          peak: intensity * randomBetween(0.06, 0.16),
+          attack: randomBetween(0.18, 0.5),
+          noise: Math.random() > 0.5 ? "brown" : "pink",
+          filters: [
+            { type: "bandpass", frequency: randomBetween(85, 220), q: randomBetween(0.35, 0.85) },
+            { type: "lowpass", frequency: randomBetween(260, 520) },
+          ],
+          pan: pan + randomBetween(-0.25, 0.25),
+        });
+      }
+
+      if (isClose) {
+        scheduleNoiseBurst(ctx, mixGain, {
+          startTime: now + randomBetween(0, 0.08),
+          duration: randomBetween(0.07, 0.16),
+          peak: randomBetween(0.055, 0.11),
+          attack: 0.004,
+          noise: "white",
+          filters: [
+            { type: "highpass", frequency: randomBetween(900, 1600) },
+            { type: "lowpass", frequency: randomBetween(3800, 6200) },
+          ],
+          pan,
+        });
+      }
+
+      if (isClose && Math.random() > 0.45) {
         const restrikeTime = now + attack + 0.3 + Math.random() * 0.8;
         const restrikeIntensity = intensity * (0.4 + Math.random() * 0.3);
         mixGain.gain.linearRampToValueAtTime(intensity * 0.3, restrikeTime - 0.1);
@@ -690,7 +865,7 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
         mixGain.gain.exponentialRampToValueAtTime(0.03, now + attack + decay);
       }
 
-      const nextDelay = 6000 + Math.random() * 20000;
+      const nextDelay = randomBetween(9000, 28000);
       const id = window.setTimeout(scheduleStrike, nextDelay);
       const ids = ambientIntervalsRef.current.get("thunder") || [];
       ids.push(id);
@@ -717,34 +892,54 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
       const now = ctx.currentTime;
 
       const rand = Math.random();
-      if (rand > 0.25) {
-        const isLoud = Math.random() > 0.7;
-        const crackleSrc = ctx.createBufferSource();
-        crackleSrc.buffer = createWhiteNoiseBuffer(ctx, 0.08);
-        const cG = ctx.createGain();
-        const cHP = ctx.createBiquadFilter();
-        cHP.type = "highpass";
-        cHP.frequency.value = 2000 + Math.random() * 3000;
-        const vol = isLoud ? (0.15 + Math.random() * 0.15) : (0.04 + Math.random() * 0.08);
-        const dur = isLoud ? (0.04 + Math.random() * 0.03) : (0.02 + Math.random() * 0.02);
-        cG.gain.setValueAtTime(0, now);
-        cG.gain.linearRampToValueAtTime(vol, now + 0.003);
-        cG.gain.exponentialRampToValueAtTime(0.001, now + dur);
-        crackleSrc.connect(cHP);
-        cHP.connect(cG);
-        cG.connect(mixGain);
-        crackleSrc.start(now);
+      if (rand > 0.32) {
+        const clusterCount = Math.random() > 0.78 ? 2 + Math.floor(Math.random() * 4) : 1;
+        for (let i = 0; i < clusterCount; i++) {
+          const isLoud = Math.random() > 0.72;
+          scheduleNoiseBurst(ctx, mixGain, {
+            startTime: now + i * randomBetween(0.018, 0.055),
+            duration: isLoud ? randomBetween(0.045, 0.11) : randomBetween(0.018, 0.05),
+            peak: isLoud ? randomBetween(0.085, 0.18) : randomBetween(0.025, 0.075),
+            attack: randomBetween(0.0015, 0.005),
+            noise: "white",
+            filters: [
+              { type: "highpass", frequency: randomBetween(1500, 3200) },
+              { type: "lowpass", frequency: randomBetween(4800, 8200) },
+            ],
+            pan: randomBetween(-0.75, 0.75),
+          });
+        }
       }
 
-      if (Math.random() > 0.85) {
-        const popDur = 0.3 + Math.random() * 0.5;
-        mixGain.gain.cancelScheduledValues(now);
-        mixGain.gain.setValueAtTime(Math.max(0.01, mixGain.gain.value), now);
-        mixGain.gain.linearRampToValueAtTime(0.8 + Math.random() * 0.2, now + 0.05);
-        mixGain.gain.linearRampToValueAtTime(0.4, now + popDur);
+      if (Math.random() > 0.9) {
+        const popStart = now + randomBetween(0.03, 0.18);
+        scheduleNoiseBurst(ctx, mixGain, {
+          startTime: popStart,
+          duration: randomBetween(0.08, 0.18),
+          peak: randomBetween(0.08, 0.16),
+          attack: randomBetween(0.004, 0.012),
+          noise: "pink",
+          filters: [
+            { type: "bandpass", frequency: randomBetween(350, 900), q: randomBetween(0.8, 1.5) },
+            { type: "lowpass", frequency: randomBetween(2200, 3600) },
+          ],
+          pan: randomBetween(-0.5, 0.5),
+        });
+        scheduleNoiseBurst(ctx, mixGain, {
+          startTime: popStart + randomBetween(0.01, 0.035),
+          duration: randomBetween(0.025, 0.06),
+          peak: randomBetween(0.035, 0.08),
+          attack: 0.002,
+          noise: "white",
+          filters: [
+            { type: "highpass", frequency: randomBetween(2800, 4600) },
+            { type: "lowpass", frequency: randomBetween(6500, 9000) },
+          ],
+          pan: randomBetween(-0.55, 0.55),
+        });
       }
 
-      const id = window.setTimeout(scheduleCrackle, 40 + Math.random() * 350);
+      const id = window.setTimeout(scheduleCrackle, randomBetween(70, 430));
       const ids = ambientIntervalsRef.current.get("campfire") || [];
       ids.push(id);
       ambientIntervalsRef.current.set("campfire", ids);
@@ -767,28 +962,64 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
     const scheduleChirpGroup = () => {
       if (ctx.state !== "running") return;
       const now = ctx.currentTime;
-      const numChirps = 2 + Math.floor(Math.random() * 4);
-      const baseFreq = 2000 + Math.random() * 2500;
+      const motif = randomChoice([
+        { minFreq: 2200, maxFreq: 3800, minChirps: 2, maxChirps: 5, gap: 0.13, dur: 0.11 },
+        { minFreq: 3200, maxFreq: 5400, minChirps: 3, maxChirps: 7, gap: 0.085, dur: 0.07 },
+        { minFreq: 1500, maxFreq: 2600, minChirps: 1, maxChirps: 3, gap: 0.22, dur: 0.18 },
+      ]);
+      const numChirps = motif.minChirps + Math.floor(Math.random() * (motif.maxChirps - motif.minChirps + 1));
+      const baseFreq = randomBetween(motif.minFreq, motif.maxFreq);
+      const pan = randomBetween(-0.9, 0.9);
 
       for (let c = 0; c < numChirps; c++) {
-        const chirpStart = now + c * (0.12 + Math.random() * 0.15);
-        const chirpDur = 0.06 + Math.random() * 0.12;
-        const freq = baseFreq * (0.85 + Math.random() * 0.3);
-        const endFreq = freq * (0.7 + Math.random() * 0.6);
+        const chirpStart = now + c * randomBetween(motif.gap * 0.7, motif.gap * 1.45);
+        const chirpDur = randomBetween(motif.dur * 0.65, motif.dur * 1.45);
+        const freq = baseFreq * randomBetween(0.82, 1.22);
+        const midFreq = freq * randomBetween(1.04, 1.32);
+        const endFreq = freq * randomBetween(0.72, 1.12);
 
         const osc = ctx.createOscillator();
         const g = ctx.createGain();
-        osc.type = "sine";
+        osc.type = randomChoice<OscillatorType>(["sine", "triangle"]);
         osc.frequency.setValueAtTime(freq, chirpStart);
-        osc.frequency.linearRampToValueAtTime(endFreq, chirpStart + chirpDur);
-        g.gain.setValueAtTime(0, chirpStart);
-        g.gain.linearRampToValueAtTime(0.04 + Math.random() * 0.03, chirpStart + chirpDur * 0.15);
-        g.gain.setValueAtTime(0.04 + Math.random() * 0.02, chirpStart + chirpDur * 0.7);
+        osc.frequency.exponentialRampToValueAtTime(midFreq, chirpStart + chirpDur * randomBetween(0.25, 0.45));
+        osc.frequency.exponentialRampToValueAtTime(endFreq, chirpStart + chirpDur);
+        g.gain.setValueAtTime(0.0001, chirpStart);
+        g.gain.linearRampToValueAtTime(randomBetween(0.026, 0.055), chirpStart + chirpDur * 0.18);
+        g.gain.setValueAtTime(randomBetween(0.018, 0.04), chirpStart + chirpDur * 0.68);
         g.gain.linearRampToValueAtTime(0, chirpStart + chirpDur);
         osc.connect(g);
-        g.connect(mixGain);
+        connectWithPan(ctx, g, mixGain, pan + randomBetween(-0.12, 0.12));
         osc.start(chirpStart);
         osc.stop(chirpStart + chirpDur + 0.01);
+
+        if (Math.random() > 0.55) {
+          const overtone = ctx.createOscillator();
+          const overtoneGain = ctx.createGain();
+          overtone.type = "sine";
+          overtone.frequency.setValueAtTime(freq * randomBetween(1.48, 1.72), chirpStart);
+          overtone.frequency.exponentialRampToValueAtTime(endFreq * randomBetween(1.45, 1.65), chirpStart + chirpDur);
+          overtoneGain.gain.setValueAtTime(0.0001, chirpStart);
+          overtoneGain.gain.linearRampToValueAtTime(randomBetween(0.006, 0.014), chirpStart + chirpDur * 0.2);
+          overtoneGain.gain.exponentialRampToValueAtTime(0.0001, chirpStart + chirpDur);
+          overtone.connect(overtoneGain);
+          connectWithPan(ctx, overtoneGain, mixGain, pan + randomBetween(-0.12, 0.12));
+          overtone.start(chirpStart);
+          overtone.stop(chirpStart + chirpDur + 0.01);
+        }
+
+        scheduleNoiseBurst(ctx, mixGain, {
+          startTime: chirpStart,
+          duration: chirpDur * randomBetween(0.6, 1),
+          peak: randomBetween(0.002, 0.006),
+          attack: 0.006,
+          noise: "white",
+          filters: [
+            { type: "highpass", frequency: 2600 },
+            { type: "lowpass", frequency: 8500 },
+          ],
+          pan,
+        });
       }
 
       if (Math.random() > 0.6) {
@@ -810,14 +1041,14 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
         g2.gain.setValueAtTime(0.02, trillStart + trillDur * 0.8);
         g2.gain.linearRampToValueAtTime(0, trillStart + trillDur);
         osc2.connect(g2);
-        g2.connect(mixGain);
+        connectWithPan(ctx, g2, mixGain, pan + randomBetween(-0.2, 0.2));
         osc2.start(trillStart);
         osc2.stop(trillStart + trillDur + 0.01);
         lfo.start(trillStart);
         lfo.stop(trillStart + trillDur + 0.01);
       }
 
-      const nextDelay = 1200 + Math.random() * 4000;
+      const nextDelay = randomBetween(1600, 6200);
       const id = window.setTimeout(scheduleChirpGroup, nextDelay);
       const ids = ambientIntervalsRef.current.get("birds") || [];
       ids.push(id);
@@ -842,30 +1073,61 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
       if (ctx.state !== "running") return;
       const now = ctx.currentTime;
 
-      const bowlFreq = [293.66, 329.63, 392, 440, 523.25][Math.floor(Math.random() * 5)];
-      const bowlDur = 8 + Math.random() * 6;
-      const harmonics = [1, 2.76, 4.72, 6.83];
+      const bowlFreq = randomChoice([293.66, 329.63, 392, 440, 523.25]);
+      const bowlDur = randomBetween(9, 15);
+      const pan = randomBetween(-0.18, 0.18);
+      const harmonics = [1, 2.01, 2.76, 4.72, 6.83];
+
+      scheduleNoiseBurst(ctx, mixGain, {
+        startTime: now,
+        duration: randomBetween(0.08, 0.16),
+        peak: randomBetween(0.012, 0.026),
+        attack: 0.004,
+        noise: "pink",
+        filters: [
+          { type: "bandpass", frequency: randomBetween(900, 1800), q: randomBetween(1.2, 2.4) },
+          { type: "lowpass", frequency: 3600 },
+        ],
+        pan,
+      });
+
       harmonics.forEach((h, idx) => {
         const osc = ctx.createOscillator();
         const g = ctx.createGain();
         osc.type = "sine";
-        osc.frequency.setValueAtTime(bowlFreq * h, now);
-        osc.frequency.linearRampToValueAtTime(bowlFreq * h * (1 + Math.random() * 0.003), now + bowlDur);
-        const vol = 0.045 / (idx + 1);
+        const harmonicFreq = bowlFreq * h * randomBetween(0.998, 1.002);
+        osc.frequency.setValueAtTime(harmonicFreq, now);
+        osc.frequency.linearRampToValueAtTime(harmonicFreq * (1 + Math.random() * 0.004), now + bowlDur);
+        const vol = 0.05 / (idx + 1);
         g.gain.setValueAtTime(0, now);
-        g.gain.linearRampToValueAtTime(vol, now + 0.15);
+        g.gain.linearRampToValueAtTime(vol, now + randomBetween(0.12, 0.28));
         g.gain.exponentialRampToValueAtTime(vol * 0.3, now + bowlDur * 0.5);
         g.gain.exponentialRampToValueAtTime(0.001, now + bowlDur);
         osc.connect(g);
-        g.connect(mixGain);
+        connectWithPan(ctx, g, mixGain, pan + (idx % 2 === 0 ? -0.08 : 0.08));
         osc.start(now);
         osc.stop(now + bowlDur + 0.1);
+
+        if (idx < 3) {
+          const beat = ctx.createOscillator();
+          const beatGain = ctx.createGain();
+          beat.type = "sine";
+          beat.frequency.setValueAtTime(harmonicFreq * randomBetween(1.003, 1.008), now);
+          beat.frequency.linearRampToValueAtTime(harmonicFreq * randomBetween(0.997, 1.002), now + bowlDur);
+          beatGain.gain.setValueAtTime(0, now + 0.03);
+          beatGain.gain.linearRampToValueAtTime(vol * 0.32, now + randomBetween(0.3, 0.7));
+          beatGain.gain.exponentialRampToValueAtTime(0.001, now + bowlDur * randomBetween(0.65, 0.9));
+          beat.connect(beatGain);
+          connectWithPan(ctx, beatGain, mixGain, pan + (idx % 2 === 0 ? 0.1 : -0.1));
+          beat.start(now + 0.03);
+          beat.stop(now + bowlDur + 0.1);
+        }
       });
 
       if (Math.random() > 0.4) {
-        const droneStart = now + 2 + Math.random() * 2;
-        const droneDur = 5 + Math.random() * 4;
-        const droneFreq = [110, 130.81, 146.83, 164.81][Math.floor(Math.random() * 4)];
+        const droneStart = now + randomBetween(2, 4);
+        const droneDur = randomBetween(5, 9);
+        const droneFreq = randomChoice([110, 130.81, 146.83, 164.81]);
         [1, 1.5, 2, 3].forEach((h, idx) => {
           const osc = ctx.createOscillator();
           const g = ctx.createGain();
@@ -878,13 +1140,13 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
           g.gain.linearRampToValueAtTime(vol * 0.8, droneStart + droneDur * 0.7);
           g.gain.linearRampToValueAtTime(0, droneStart + droneDur);
           osc.connect(g);
-          g.connect(mixGain);
+          connectWithPan(ctx, g, mixGain, randomBetween(-0.16, 0.16));
           osc.start(droneStart);
           osc.stop(droneStart + droneDur + 0.1);
         });
       }
 
-      const nextDelay = 6000 + Math.random() * 6000;
+      const nextDelay = randomBetween(9000, 15000);
       const id = window.setTimeout(scheduleBowlStrike, nextDelay);
       const ids = ambientIntervalsRef.current.get("ring") || [];
       ids.push(id);
@@ -908,38 +1170,62 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
     const schedulePurrCycle = () => {
       if (ctx.state !== "running") return;
       const now = ctx.currentTime;
-      const cycleDur = 3 + Math.random() * 2;
-      const baseFreq = 22 + Math.random() * 4;
-
-      const osc = ctx.createOscillator();
-      const g = ctx.createGain();
-      const lpf = ctx.createBiquadFilter();
-      lpf.type = "lowpass";
-      lpf.frequency.value = 120;
-
-      osc.type = "sawtooth";
-      osc.frequency.setValueAtTime(baseFreq, now);
-      osc.frequency.linearRampToValueAtTime(baseFreq * 1.03, now + cycleDur * 0.5);
-      osc.frequency.linearRampToValueAtTime(baseFreq * 0.98, now + cycleDur);
-
-      g.gain.setValueAtTime(0, now);
-      const pulseInterval = 0.12 + Math.random() * 0.04;
+      const cycleDur = randomBetween(3.4, 5.4);
+      const baseFreq = randomBetween(24, 31);
+      const pulseInterval = randomBetween(0.095, 0.145);
       const numPulses = Math.floor(cycleDur / pulseInterval);
-      for (let i = 0; i < numPulses; i++) {
-        const t = now + i * pulseInterval;
-        const breathMod = 0.5 + 0.5 * Math.sin((i / numPulses) * Math.PI);
-        g.gain.linearRampToValueAtTime(0.09 * breathMod, t + pulseInterval * 0.35);
-        g.gain.linearRampToValueAtTime(0.02 * breathMod, t + pulseInterval * 0.85);
-      }
-      g.gain.linearRampToValueAtTime(0, now + cycleDur);
 
-      osc.connect(lpf);
-      lpf.connect(g);
-      g.connect(mixGain);
-      osc.start(now);
-      osc.stop(now + cycleDur + 0.1);
+      const applyPurrEnvelope = (gain: GainNode, peak: number, floor: number) => {
+        gain.gain.setValueAtTime(0.0001, now);
+        for (let i = 0; i < numPulses; i++) {
+          const t = now + i * pulseInterval;
+          const breathMod = 0.45 + 0.55 * Math.sin((i / Math.max(1, numPulses - 1)) * Math.PI);
+          gain.gain.linearRampToValueAtTime(peak * breathMod, t + pulseInterval * 0.35);
+          gain.gain.linearRampToValueAtTime(floor * breathMod, t + pulseInterval * 0.9);
+        }
+        gain.gain.linearRampToValueAtTime(0.0001, now + cycleDur);
+      };
 
-      const gap = 0.1 + Math.random() * 0.4;
+      const schedulePurrLayer = (type: OscillatorType, freqMult: number, peak: number, floor: number, lpfFreq: number, pan: number) => {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        const lpf = ctx.createBiquadFilter();
+        lpf.type = "lowpass";
+        lpf.frequency.value = lpfFreq;
+        osc.type = type;
+        osc.frequency.setValueAtTime(baseFreq * freqMult, now);
+        osc.frequency.linearRampToValueAtTime(baseFreq * freqMult * randomBetween(1.01, 1.035), now + cycleDur * 0.48);
+        osc.frequency.linearRampToValueAtTime(baseFreq * freqMult * randomBetween(0.97, 1), now + cycleDur);
+        applyPurrEnvelope(g, peak, floor);
+        osc.connect(lpf);
+        lpf.connect(g);
+        connectWithPan(ctx, g, mixGain, pan);
+        osc.start(now);
+        osc.stop(now + cycleDur + 0.1);
+      };
+
+      schedulePurrLayer("triangle", 1, 0.055, 0.018, 95, -0.08);
+      schedulePurrLayer("sawtooth", 2, 0.024, 0.008, 150, 0.06);
+      schedulePurrLayer("sine", 3, 0.012, 0.004, 220, 0.02);
+
+      const texture = ctx.createBufferSource();
+      texture.buffer = createNoiseBuffer(ctx, "brown", cycleDur + 0.1);
+      const textureHP = ctx.createBiquadFilter();
+      const textureLP = ctx.createBiquadFilter();
+      const textureG = ctx.createGain();
+      textureHP.type = "highpass";
+      textureHP.frequency.value = 22;
+      textureLP.type = "lowpass";
+      textureLP.frequency.value = 260;
+      applyPurrEnvelope(textureG, 0.018, 0.005);
+      texture.connect(textureHP);
+      textureHP.connect(textureLP);
+      textureLP.connect(textureG);
+      connectWithPan(ctx, textureG, mixGain, 0);
+      texture.start(now);
+      texture.stop(now + cycleDur + 0.1);
+
+      const gap = randomBetween(0.12, 0.55);
       const id = window.setTimeout(schedulePurrCycle, (cycleDur + gap) * 1000);
       const ids = ambientIntervalsRef.current.get("purring") || [];
       ids.push(id);
@@ -972,22 +1258,43 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
       mixGain.gain.linearRampToValueAtTime(peak, now + dur * 0.4);
       mixGain.gain.linearRampToValueAtTime(base, now + dur);
 
-      if (Math.random() > 0.4) {
-        const rustleTime = now + 1 + Math.random() * (dur - 3);
-        const rustleSrc = ctx.createBufferSource();
-        rustleSrc.buffer = createWhiteNoiseBuffer(ctx, 0.6);
-        const rG = ctx.createGain();
-        const rBP = ctx.createBiquadFilter();
-        rBP.type = "bandpass";
-        rBP.frequency.value = 2000 + Math.random() * 2500;
-        rBP.Q.value = 0.5;
-        rG.gain.setValueAtTime(0, rustleTime);
-        rG.gain.linearRampToValueAtTime(0.04 + Math.random() * 0.06, rustleTime + 0.1);
-        rG.gain.linearRampToValueAtTime(0, rustleTime + 0.4 + Math.random() * 0.4);
-        rustleSrc.connect(rBP);
-        rBP.connect(rG);
-        rG.connect(mixGain);
-        rustleSrc.start(rustleTime);
+      const leafSweeps = 3 + Math.floor(Math.random() * 6);
+      for (let i = 0; i < leafSweeps; i++) {
+        scheduleNoiseBurst(ctx, mixGain, {
+          startTime: now + randomBetween(0.6, dur - 0.7),
+          duration: randomBetween(0.28, 1.35),
+          peak: randomBetween(0.018, 0.06),
+          attack: randomBetween(0.07, 0.22),
+          noise: Math.random() > 0.5 ? "pink" : "white",
+          filters: [
+            { type: "highpass", frequency: randomBetween(800, 1400) },
+            { type: "bandpass", frequency: randomBetween(1600, 4200), q: randomBetween(0.3, 0.75) },
+            { type: "lowpass", frequency: randomBetween(4300, 6800) },
+          ],
+          pan: randomBetween(-0.95, 0.95),
+        });
+      }
+
+      if (Math.random() > 0.78) {
+        const creakStart = now + randomBetween(1, dur - 1);
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        const bp = ctx.createBiquadFilter();
+        const creakFreq = randomBetween(120, 260);
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(creakFreq, creakStart);
+        osc.frequency.exponentialRampToValueAtTime(creakFreq * randomBetween(0.58, 0.82), creakStart + randomBetween(0.55, 1.2));
+        bp.type = "bandpass";
+        bp.frequency.value = creakFreq * 1.4;
+        bp.Q.value = 0.9;
+        g.gain.setValueAtTime(0.0001, creakStart);
+        g.gain.linearRampToValueAtTime(randomBetween(0.006, 0.014), creakStart + 0.12);
+        g.gain.exponentialRampToValueAtTime(0.0001, creakStart + randomBetween(0.8, 1.5));
+        osc.connect(bp);
+        bp.connect(g);
+        connectWithPan(ctx, g, mixGain, randomBetween(-0.35, 0.35));
+        osc.start(creakStart);
+        osc.stop(creakStart + 1.6);
       }
 
       const id = window.setTimeout(scheduleForestEvent, dur * 1000);
