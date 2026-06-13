@@ -54,7 +54,7 @@ npm run start
 
 ## Audio Review
 
-The app generates its ambience procedurally with Web Audio instead of bundled audio files. See `docs/audio-soundscape-review.md` for the current sound coverage review and recommended next additions.
+The app now ships recorded audio files under `client/public/audio/` and plays them through Web Audio. See `docs/audio-soundscape-review.md` for the current sound coverage review, and `docs/audio-sample-sources.md` for source/license details.
 
 Audio wiring verification:
 

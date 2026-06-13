@@ -1,0 +1,96 @@
+[
+  {
+    "sound": "brown",
+    "localFile": "/audio/brown-noise.ogg",
+    "sourceTitle": "Brownnoise",
+    "sourcePage": "https://commons.wikimedia.org/wiki/File:Brownnoise.ogg",
+    "sourceFile": "https://upload.wikimedia.org/wikipedia/commons/c/c9/Brownnoise.ogg",
+    "license": "Public domain",
+    "attribution": "Public domain"
+  },
+  {
+    "sound": "rain",
+    "localFile": "/audio/rain.ogg",
+    "sourceTitle": "Rain (1)",
+    "sourcePage": "https://commons.wikimedia.org/wiki/File:Rain_(1).ogg",
+    "sourceFile": "https://upload.wikimedia.org/wikipedia/commons/0/0e/Rain_%281%29.ogg",
+    "license": "Public domain",
+    "attribution": "ezwa / PDSounds, public domain"
+  },
+  {
+    "sound": "coffee",
+    "localFile": "/audio/coffee-shop.ogg",
+    "sourceTitle": "Restaurant ambience",
+    "sourcePage": "https://commons.wikimedia.org/wiki/File:Restaurant_ambience.ogg",
+    "sourceFile": "https://upload.wikimedia.org/wikipedia/commons/b/b5/Restaurant_ambience.ogg",
+    "license": "Public domain",
+    "attribution": "stephan / PDSounds, public domain"
+  },
+  {
+    "sound": "thunder",
+    "localFile": "/audio/thunderstorm.ogg",
+    "sourceTitle": "Rain and thunder (1)",
+    "sourcePage": "https://commons.wikimedia.org/wiki/File:Rain_and_thunder_(1).ogg",
+    "sourceFile": "https://upload.wikimedia.org/wikipedia/commons/b/bb/Rain_and_thunder_%281%29.ogg",
+    "license": "Public domain",
+    "attribution": "ezwa / PDSounds, public domain"
+  },
+  {
+    "sound": "wind",
+    "localFile": "/audio/wind.ogg",
+    "sourceTitle": "Gentle breeze and birds singing",
+    "sourcePage": "https://commons.wikimedia.org/wiki/File:Gentle_breeze_and_birds_singing.ogg",
+    "sourceFile": "https://upload.wikimedia.org/wikipedia/commons/0/0e/Gentle_breeze_and_birds_singing.ogg",
+    "license": "Public domain",
+    "attribution": "PDSounds, public domain"
+  },
+  {
+    "sound": "birds",
+    "localFile": "/audio/birds.ogg",
+    "sourceTitle": "Birdsong mild sunny day",
+    "sourcePage": "https://commons.wikimedia.org/wiki/File:Birdsong_mild_sunny_day.ogg",
+    "sourceFile": "https://upload.wikimedia.org/wikipedia/commons/7/75/Birdsong_mild_sunny_day.ogg",
+    "license": "Public domain",
+    "attribution": "stephan / PDSounds, public domain"
+  },
+  {
+    "sound": "campfire",
+    "localFile": "/audio/campfire.ogg",
+    "sourceTitle": "Campfire sound ambience",
+    "sourcePage": "https://commons.wikimedia.org/wiki/File:Campfire_sound_ambience.ogg",
+    "sourceFile": "https://upload.wikimedia.org/wikipedia/commons/b/b1/Campfire_sound_ambience.ogg",
+    "license": "CC BY 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+    "attribution": "Glaneur de sons, via Freesound.org"
+  },
+  {
+    "sound": "ring",
+    "localFile": "/audio/tibetan-bowl.ogg",
+    "sourceTitle": "Small tibetan singing bowl",
+    "sourcePage": "https://commons.wikimedia.org/wiki/File:Small_tibetan_singing_bowl.ogg",
+    "sourceFile": "https://upload.wikimedia.org/wikipedia/commons/1/17/Small_tibetan_singing_bowl.ogg",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "attribution": "Cassa342, own work"
+  },
+  {
+    "sound": "purring",
+    "localFile": "/audio/cat-purr.ogg",
+    "sourceTitle": "Purr (10 sec loopable)",
+    "sourcePage": "https://commons.wikimedia.org/wiki/File:Purr_(10_sec_loopable).ogg",
+    "sourceFile": "https://upload.wikimedia.org/wikipedia/commons/4/4c/Purr_%2810_sec_loopable%29.ogg",
+    "license": "Public domain",
+    "attribution": "Insanejeff, public domain"
+  },
+  {
+    "sound": "forest",
+    "localFile": "/audio/forest-leaves.wav",
+    "sourceTitle": "Rustling leaves (Gravity Sound)",
+    "sourcePage": "https://commons.wikimedia.org/wiki/File:Rustling_leaves_(Gravity_Sound).wav",
+    "sourceFile": "https://upload.wikimedia.org/wikipedia/commons/d/db/Rustling_leaves_%28Gravity_Sound%29.wav",
+    "license": "CC BY 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+    "attribution": "Gravity Sound"
+  }
+]
+

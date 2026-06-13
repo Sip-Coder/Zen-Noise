@@ -2,31 +2,32 @@
 
 ## Summary
 
-Zen Noise does not currently ship sample audio files such as `.mp3`, `.wav`, `.ogg`, or `.flac`. The app generates its soundscape procedurally with Web Audio in `client/src/hooks/use-audio-engine.ts`.
+Zen Noise now ships real recorded audio assets under `client/public/audio/`. The app plays those files through Web Audio in `client/src/hooks/use-audio-engine.ts`, so each sound has a real local audio source plus per-sound gain control.
 
-That is a good fit for this product: no licensing risk, no large downloads, no looping sample artifacts from compressed files, and fine control over density, volume, stereo placement, and sleep-safe transient levels.
+The previous procedural synthesis path was useful for prototyping, but the current app path is now recorded-sample-backed for more recognizable rain, coffee-room, storm, wind, birds, campfire, bowl, purr, and leaves textures. Licensing and attribution are documented in `docs/audio-sample-sources.md` and `client/public/audio/audio-sources.json`.
 
 ## Current Sound Coverage
 
 | Requested sound | Current implementation | Review status |
 | --- | --- | --- |
-| Brown noise | Generated brown-noise buffer through low-frequency random walk, low-pass filtering, volume control, and optional wave modulation. | Covered. Updated to avoid hard clipping and reduce loop-edge artifacts. |
-| Gentle rain | Layered filtered white, pink, and brown noise with randomized droplet and splash events. | Covered. Good calming fit because events are soft, short, and stereo-spread. |
-| Coffee shop background | Low murmur bed with soft cup clinks, footsteps, and room movement. | Covered. Updated to reduce sharp clink frequency so it stays ambient instead of distracting. |
-| Gentle thunderstorms | Low rumble bed with occasional rolling thunder events. | Covered. Updated to make close strikes rarer, softer, and less sudden. |
-| Soft winds | Pink-noise gust bed with slow gain movement and soft rustle bursts. | Covered. Good fit for sleep because the modulation is gradual. |
-| Chirping birds | Sparse oscillator chirps, overtones, quiet breath/noise texture, and occasional trills. | Covered. Updated to reduce peak volume, increase spacing, and make trills less frequent. |
-| Crackling camp fire | Brown/pink fire bed with randomized crackles and small pop clusters. | Covered. Updated to slow and soften crackle density for nighttime listening. |
-| Tibetan bowl ringing | Sine harmonics, beating partials, long decay, and optional low drone. | Covered. Updated to slightly lower harmonic/drone levels and add more space between strikes. |
-| Sleeping cat purr | Low oscillator pulses with breathing-like amplitude shape plus brown-noise texture. | Covered. Good fit for sleep because it is low, steady, and close-mic styled. |
-| Forest rustling leaves | Pink/brown canopy bed with sweeping leaf rustles and rare soft creaks. | Covered. Good fit for sleep when kept at lower volume. |
+| Brown noise | `/audio/brown-noise.ogg` | Covered. Real local audio file with Web Audio gain control and wave modulation. |
+| Gentle rain | `/audio/rain.ogg` | Covered. Real rain recording. |
+| Coffee shop background | `/audio/coffee-shop.ogg` | Covered. Real restaurant/cafe-style room ambience recording. |
+| Gentle thunderstorms | `/audio/thunderstorm.ogg` | Covered. Real rain-and-thunder recording. |
+| Soft winds | `/audio/wind.ogg` | Covered. Real gentle breeze recording. |
+| Chirping birds | `/audio/birds.ogg` | Covered. Real birdsong recording. |
+| Crackling camp fire | `/audio/campfire.ogg` | Covered. Real campfire ambience recording. |
+| Tibetan bowl ringing | `/audio/tibetan-bowl.ogg` | Covered. Real Tibetan singing bowl recording. |
+| Sleeping cat purr | `/audio/cat-purr.ogg` | Covered. Real loopable purring recording. |
+| Forest rustling leaves | `/audio/forest-leaves.wav` | Covered. Real rustling-leaves recording. |
 
 ## Sound Engine Changes Made In This Pass
 
-- Added longer reusable noise beds for the looping ambient sources.
-- Added loop-tail crossfading so repeated noise beds return to their start without a hard edge.
-- Normalized generated brown noise instead of clipping samples at `-1` and `1`.
-- Reduced sharp or surprising transient density in coffee shop, thunder, birds, campfire, and Tibetan bowl layers.
+- Added real recorded audio files for brown noise and every ambient layer.
+- Replaced the default procedural synthesis path with sample-backed Web Audio playback.
+- Added `SAMPLE_SOURCES` in `client/src/hooks/use-audio-engine.ts` so each app sound maps to a local audio file.
+- Added source/licensing metadata in `client/public/audio/audio-sources.json` and `docs/audio-sample-sources.md`.
+- Kept Web Audio gain nodes so each slider still controls its own sound independently.
 - Renamed the visible ambient labels from `Ring` to `Bowl` and from `Cats` to `Purr` so the controls match the intended sounds.
 - Added clamping for brown-noise and ambient-layer volume values so saved or slider-sent values stay between 0 and 1.
 - Added visible per-layer intensity readouts for each ambient slider.
@@ -41,11 +42,12 @@ npm run verify:audio
 
 The analyzer verifies:
 
-- The app has no bundled audio sample files, so the current sound path is procedural Web Audio.
+- The app has bundled recorded audio files and uses recorded-sample-backed Web Audio.
 - Every requested ambient sound appears in the `AmbientSound` union, `ALL_AMBIENTS`, engine defaults, saved-volume defaults, and UI options.
+- Every requested sound maps to an existing local audio file in `SAMPLE_SOURCES`.
 - Every ambient tile has a button, slider test ID, visible intensity readout, and per-sound gain wiring.
-- Brown noise uses the generated brown-noise path with normalization and loop crossfading.
-- This review document still covers the requested sound set and the additional calming-sound backlog.
+- Brown noise has a local audio file and Web Audio gain control.
+- The source manifest documents source pages, source files, licenses, and attribution.
 
 ## Slider Intensity Verification
 
@@ -56,7 +58,7 @@ Each ambient tile has:
 - a visible percentage test id: `ambient-volume-{sound}`
 - a `data-volume` value on the tile
 
-Moving a slider calls `setAmbientVolume(sound, value)`, clamps the value to `0..1`, updates React state, updates the visible percentage, and writes the same value into that sound's dedicated `GainNode` with `setTargetAtTime`.
+Moving a slider calls `setAmbientVolume(sound, value)`, clamps the value to `0..1`, updates React state, updates the visible percentage, and writes the same value into that sound's dedicated `GainNode` with `setTargetAtTime`. If a recorded sample has not loaded yet, turning the sound on loads and decodes that file before playback.
 
 ## Additional Calming Sounds To Add Next
 
