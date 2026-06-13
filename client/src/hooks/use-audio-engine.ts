@@ -14,14 +14,14 @@ const DEFAULT_VOLUMES: AmbientVolumes = {
 
 const SAMPLE_SOURCES: Record<AmbientSound | "brown", string> = {
   brown: "/audio/brown-noise.ogg",
-  rain: "/audio/rain.ogg",
-  coffee: "/audio/coffee-shop.ogg",
-  thunder: "/audio/thunderstorm.ogg",
-  wind: "/audio/wind.ogg",
-  birds: "/audio/birds.ogg",
-  campfire: "/audio/campfire.ogg",
-  ring: "/audio/tibetan-bowl.ogg",
-  purring: "/audio/cat-purr.ogg",
+  rain: "/audio/rain.mp3",
+  coffee: "/audio/coffee-shop.mp3",
+  thunder: "/audio/thunderstorm.mp3",
+  wind: "/audio/wind.mp3",
+  birds: "/audio/birds.mp3",
+  campfire: "/audio/campfire.mp3",
+  ring: "/audio/tibetan-bowl.mp3",
+  purring: "/audio/cat-purr.mp3",
   forest: "/audio/forest-leaves.wav",
 };
 
@@ -63,14 +63,40 @@ function normalizeAmbientVolumes(volumes?: Partial<AmbientVolumes>): AmbientVolu
 }
 
 async function fetchAudioBuffer(ctx: AudioContext, sound: SampleSound): Promise<AudioBuffer> {
-  const response = await fetch(SAMPLE_SOURCES[sound]);
+  try {
+    const response = await fetch(SAMPLE_SOURCES[sound]);
 
-  if (!response.ok) {
-    throw new Error(`Failed to load ${sound} sample: ${response.status} ${response.statusText}`);
+    if (!response.ok) {
+      throw new Error(`Failed to load ${sound} sample: ${response.status} ${response.statusText}`);
+    }
+
+    const audioData = await response.arrayBuffer();
+    return await ctx.decodeAudioData(audioData);
+  } catch (error) {
+    if (sound === "brown") {
+      console.warn("Using generated brown-noise fallback", error);
+      return createBrownNoiseBuffer(ctx);
+    }
+    throw error;
+  }
+}
+
+function createBrownNoiseBuffer(ctx: AudioContext, durationSeconds: number = 18): AudioBuffer {
+  const length = Math.floor(ctx.sampleRate * durationSeconds);
+  const buffer = ctx.createBuffer(2, length, ctx.sampleRate);
+
+  for (let channel = 0; channel < buffer.numberOfChannels; channel += 1) {
+    const data = buffer.getChannelData(channel);
+    let lastOut = 0;
+
+    for (let i = 0; i < length; i += 1) {
+      const white = Math.random() * 2 - 1;
+      lastOut = (lastOut + 0.02 * white) / 1.02;
+      data[i] = lastOut * 3.5;
+    }
   }
 
-  const audioData = await response.arrayBuffer();
-  return await ctx.decodeAudioData(audioData);
+  return buffer;
 }
 
 export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolumes?: AmbientVolumes): AudioEngineState {

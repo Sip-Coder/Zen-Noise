@@ -54,7 +54,7 @@ npm run start
 
 ## Audio Review
 
-The app now ships recorded audio files under `client/public/audio/` and plays them through Web Audio. See `docs/audio-soundscape-review.md` for the current sound coverage review, and `docs/audio-sample-sources.md` for source/license details.
+The app now ships recorded audio files under `client/public/audio/` and plays them through Web Audio. It also includes curated mixes, shuffle, and shareable mix links. See `docs/audio-soundscape-review.md` for the current sound coverage review, `docs/audio-sample-sources.md` for source/license details, and `docs/noisli-competitive-review.md` for the Noisli comparison.
 
 Audio wiring verification:
 

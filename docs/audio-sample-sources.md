@@ -1,19 +1,18 @@
 # Recorded Audio Sources
 
-Zen Noise now ships real recorded audio assets under `client/public/audio/`.
+Zen Noise ships real recorded audio assets under `client/public/audio/`.
 
-Most sounds are public-domain files from Wikimedia Commons/PDSounds. Some assets require attribution; keep this file and `client/public/audio/audio-sources.json` with the repo when redistributing the app.
+This pass prioritizes MP3 for browser compatibility, CC0/public-domain licensing where possible, and source-specific realism. Keep this file and `client/public/audio/audio-sources.json` with the repo when redistributing the app.
 
-| App sound | Local file | Source | License / attribution |
-| --- | --- | --- | --- |
-| Brown noise | `/audio/brown-noise.ogg` | [Brownnoise](https://commons.wikimedia.org/wiki/File:Brownnoise.ogg) | Public domain |
-| Rain | `/audio/rain.ogg` | [Rain (1)](https://commons.wikimedia.org/wiki/File:Rain_(1).ogg) | Public domain, ezwa / PDSounds |
-| Coffee | `/audio/coffee-shop.ogg` | [Restaurant ambience](https://commons.wikimedia.org/wiki/File:Restaurant_ambience.ogg) | Public domain, stephan / PDSounds |
-| Storm | `/audio/thunderstorm.ogg` | [Rain and thunder (1)](https://commons.wikimedia.org/wiki/File:Rain_and_thunder_(1).ogg) | Public domain, ezwa / PDSounds |
-| Wind | `/audio/wind.ogg` | [Gentle breeze and birds singing](https://commons.wikimedia.org/wiki/File:Gentle_breeze_and_birds_singing.ogg) | Public domain |
-| Birds | `/audio/birds.ogg` | [Birdsong mild sunny day](https://commons.wikimedia.org/wiki/File:Birdsong_mild_sunny_day.ogg) | Public domain, stephan / PDSounds |
-| Fire | `/audio/campfire.ogg` | [Campfire sound ambience](https://commons.wikimedia.org/wiki/File:Campfire_sound_ambience.ogg) | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0), Glaneur de sons via Freesound.org |
-| Bowl | `/audio/tibetan-bowl.ogg` | [Small tibetan singing bowl](https://commons.wikimedia.org/wiki/File:Small_tibetan_singing_bowl.ogg) | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0), Cassa342 |
-| Purr | `/audio/cat-purr.ogg` | [Purr (10 sec loopable)](https://commons.wikimedia.org/wiki/File:Purr_(10_sec_loopable).ogg) | Public domain, Insanejeff |
-| Forest | `/audio/forest-leaves.wav` | [Rustling leaves (Gravity Sound)](https://commons.wikimedia.org/wiki/File:Rustling_leaves_(Gravity_Sound).wav) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0), Gravity Sound |
-
+| App sound | Local file | Source | License / attribution | Research note |
+| --- | --- | --- | --- | --- |
+| Brown noise | `/audio/brown-noise.ogg` | [Brownnoise](https://commons.wikimedia.org/wiki/File:Brownnoise.ogg) | Public domain | Noise-color reference file. The app generates a local brown-noise fallback if a browser cannot decode the OGG. |
+| Gentle rain | `/audio/rain.mp3` | [Gentle Rain from Window.wav](https://freesound.org/people/YostPeter/sounds/523405/) | [Creative Commons 0](https://creativecommons.org/publicdomain/zero/1.0/), YostPeter via Freesound | Gentle window rain patter with occasional distant road noise, less harsh than the prior heavier rain sample. |
+| Coffee shop background | `/audio/coffee-shop.mp3` | [coffee shop ambience](https://freesound.org/people/waweee/sounds/370973/) | [Creative Commons 0](https://creativecommons.org/publicdomain/zero/1.0/), waweee via Freesound | Real cafeteria ambience recorded with Sound Devices 633 and Sennheiser K6 ME 66. |
+| Gentle thunderstorms | `/audio/thunderstorm.mp3` | [Rain on metal roof with distant thunder](https://freesound.org/people/DBlover/sounds/404061/) | [Creative Commons 0](https://creativecommons.org/publicdomain/zero/1.0/), DBlover via Freesound | Distant thunder over rain, selected to avoid close cracks that can startle sleep users. |
+| Soft winds | `/audio/wind.mp3` | [Soft Wind Trees Moving Ambience.wav](https://freesound.org/people/jordir/sounds/360568/) | [Creative Commons 0](https://creativecommons.org/publicdomain/zero/1.0/), jordir via Freesound | Dedicated soft wind-in-trees field recording; avoids baking birds into the wind layer. |
+| Chirping birds | `/audio/birds.mp3` | [morning birds.mp3](https://freesound.org/people/royshavit/sounds/653915/) | [Creative Commons 0](https://creativecommons.org/publicdomain/zero/1.0/), royshavit via Freesound | MP3 birds layer so bird ambience is independently controlled from wind. |
+| Crackling camp fire | `/audio/campfire.mp3` | [Campfire (Position 1)](https://freesound.org/people/SKrafft/sounds/681366/) | [Creative Commons 0](https://creativecommons.org/publicdomain/zero/1.0/), SKrafft via Freesound | Quiet nighttime campfire recording, replacing the prior CC BY 3.0 fire asset. |
+| Tibetan bowl ringing | `/audio/tibetan-bowl.mp3` | [Tibetan singing bowl](https://freesound.org/people/enhuber/sounds/400819/) | [Creative Commons 0](https://creativecommons.org/publicdomain/zero/1.0/), enhuber via Freesound | Clean stereo bowl sample, replacing the prior CC BY-SA source to avoid share-alike friction. |
+| Sleeping cat purr | `/audio/cat-purr.mp3` | [Cat Purr / gato ronroneando](https://freesound.org/people/yetcop/sounds/252645/) | [Creative Commons 0](https://creativecommons.org/publicdomain/zero/1.0/), yetcop via Freesound | Close real purr recording with recorder, date, and location details. |
+| Forest rustling leaves | `/audio/forest-leaves.wav` | [Rustling leaves (Gravity Sound)](https://commons.wikimedia.org/wiki/File:Rustling_leaves_(Gravity_Sound).wav) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0), Gravity Sound | Real rustling leaves; WAV remains broadly browser-compatible. |

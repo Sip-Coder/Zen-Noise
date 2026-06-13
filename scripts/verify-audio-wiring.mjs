@@ -19,14 +19,14 @@ const expectedAmbients = [
 
 const expectedSampleSources = {
   brown: "/audio/brown-noise.ogg",
-  rain: "/audio/rain.ogg",
-  coffee: "/audio/coffee-shop.ogg",
-  thunder: "/audio/thunderstorm.ogg",
-  wind: "/audio/wind.ogg",
-  birds: "/audio/birds.ogg",
-  campfire: "/audio/campfire.ogg",
-  ring: "/audio/tibetan-bowl.ogg",
-  purring: "/audio/cat-purr.ogg",
+  rain: "/audio/rain.mp3",
+  coffee: "/audio/coffee-shop.mp3",
+  thunder: "/audio/thunderstorm.mp3",
+  wind: "/audio/wind.mp3",
+  birds: "/audio/birds.mp3",
+  campfire: "/audio/campfire.mp3",
+  ring: "/audio/tibetan-bowl.mp3",
+  purring: "/audio/cat-purr.mp3",
   forest: "/audio/forest-leaves.wav",
 };
 
@@ -167,17 +167,20 @@ const homeText = read("client/src/pages/Home.tsx");
 const ambientComponentText = read("client/src/components/AmbientSounds.tsx");
 const reviewText = read("docs/audio-soundscape-review.md");
 const sampleSourceText = read("docs/audio-sample-sources.md");
+const mixPresetsText = read("client/src/lib/mix-presets.ts");
+const mixPresetsComponentText = read("client/src/components/MixPresets.tsx");
 const sourceManifest = JSON.parse(read("client/public/audio/audio-sources.json"));
 
 const engineSource = parse("client/src/hooks/use-audio-engine.ts", engineText);
 const homeSource = parse("client/src/pages/Home.tsx", homeText);
 const ambientSource = parse("client/src/components/AmbientSounds.tsx", ambientComponentText);
+const mixPresetsSource = parse("client/src/lib/mix-presets.ts", mixPresetsText);
 
 const failures = [];
 const ambientUnion = getStringUnion(engineSource, "AmbientSound");
 const allAmbients = getStringArray(engineSource, "ALL_AMBIENTS");
 const engineDefaults = getObjectKeys(engineSource, "DEFAULT_VOLUMES");
-const homeDefaults = getObjectKeys(homeSource, "DEFAULT_AMBIENT_VOLUMES");
+const homeDefaults = getObjectKeys(mixPresetsSource, "DEFAULT_AMBIENT_VOLUMES");
 const sampleSources = getObjectStringValues(engineSource, "SAMPLE_SOURCES");
 const ambientOptions = getAmbientOptions(ambientSource);
 const ambientOptionValues = ambientOptions.map((option) => option.value);
@@ -241,8 +244,31 @@ if (!ambientComponentText.includes("data-testid={`ambient-volume-${opt.value}`}"
   "source.loop = true",
   "setAmbientVolume",
   "node.gain.gain.setTargetAtTime",
+  "createBrownNoiseBuffer",
 ].forEach((needle) => {
   if (!engineText.includes(needle)) failures.push(`Sample-backed engine is missing source evidence: ${needle}.`);
+});
+
+[
+  "MIX_PRESETS",
+  "encodeMixToSearchParams",
+  "decodeMixFromSearch",
+  "deep-focus",
+  "sleep-rain",
+  "rain-cabin",
+  "forest-rest",
+  "hearth",
+  "bowl-reset",
+].forEach((needle) => {
+  if (!mixPresetsText.includes(needle)) failures.push(`Mix preset wiring is missing source evidence: ${needle}.`);
+});
+
+[
+  "btn-mix-shuffle",
+  "btn-mix-share",
+  "btn-mix-${preset.id}",
+].forEach((needle) => {
+  if (!mixPresetsComponentText.includes(needle)) failures.push(`Mix preset UI is missing source evidence: ${needle}.`);
 });
 
 docCoverageTerms.forEach((term) => {
@@ -280,6 +306,9 @@ const report = {
     ambientComponentText.includes("ambient-volume-${opt.value}") &&
     engineText.includes("setAmbientVolume") &&
     engineText.includes("setTargetAtTime"),
+  mixPresetsVerified: mixPresetsText.includes("MIX_PRESETS") &&
+    mixPresetsComponentText.includes("btn-mix-share") &&
+    homeText.includes("copyCurrentMixLink"),
   documentationVerified: failures.filter((failure) => failure.includes("docs")).length === 0,
 };
 
@@ -289,4 +318,3 @@ if (failures.length) {
 }
 
 console.log(JSON.stringify({ ok: true, report }, null, 2));
-

@@ -1,11 +1,20 @@
-import { useEffect } from "react";
-import { useAudioEngine, type WaveIntensity, type AmbientVolumes } from "@/hooks/use-audio-engine";
+import { useEffect, useMemo, useState } from "react";
+import { useAudioEngine, ALL_AMBIENTS, type WaveIntensity, type AmbientVolumes } from "@/hooks/use-audio-engine";
 import { useTimer } from "@/hooks/use-timer";
 import { VolumeSlider } from "@/components/VolumeSlider";
 import { TimerSelector } from "@/components/TimerSelector";
 import { WaveControl } from "@/components/WaveControl";
 import { AmbientSounds } from "@/components/AmbientSounds";
 import { InstallPrompt } from "@/components/InstallPrompt";
+import { MixPresets } from "@/components/MixPresets";
+import {
+  DEFAULT_AMBIENT_VOLUMES,
+  MIX_PRESETS,
+  decodeMixFromSearch,
+  encodeMixToSearchParams,
+  normalizeAmbientVolumes,
+  type MixPreset,
+} from "@/lib/mix-presets";
 import { Play, Pause, Moon, Info } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -18,11 +27,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-const DEFAULT_AMBIENT_VOLUMES: AmbientVolumes = {
-  rain: 0, coffee: 0, thunder: 0, wind: 0, birds: 0,
-  campfire: 0, ring: 0, purring: 0, forest: 0,
-};
-
 function loadSavedAmbientVolumes(): AmbientVolumes {
   try {
     const saved = localStorage.getItem('zen_ambient_volumes');
@@ -33,16 +37,18 @@ function loadSavedAmbientVolumes(): AmbientVolumes {
         delete parsed.chanting;
         localStorage.setItem('zen_ambient_volumes', JSON.stringify(parsed));
       }
-      return { ...DEFAULT_AMBIENT_VOLUMES, ...parsed };
+      return normalizeAmbientVolumes(parsed);
     }
   } catch {}
   return { ...DEFAULT_AMBIENT_VOLUMES };
 }
 
 export default function Home() {
-  const savedVolume = parseFloat(localStorage.getItem('brown_noise_volume') || '0.5');
-  const savedWave = (localStorage.getItem('brown_noise_wave') as WaveIntensity) || 'steady';
-  const savedAmbientVolumes = loadSavedAmbientVolumes();
+  const initialMix = useMemo(() => decodeMixFromSearch(window.location.search), []);
+  const savedVolume = initialMix?.brownVolume ?? parseFloat(localStorage.getItem('brown_noise_volume') || '0.5');
+  const savedWave = initialMix?.waveIntensity ?? ((localStorage.getItem('brown_noise_wave') as WaveIntensity) || 'steady');
+  const savedAmbientVolumes = initialMix?.ambientVolumes ?? loadSavedAmbientVolumes();
+  const [mixShareState, setMixShareState] = useState<"idle" | "copied" | "linked">("idle");
 
   const {
     isPlaying,
@@ -77,6 +83,45 @@ export default function Home() {
   });
 
   const activeCount = Object.values(ambientVolumes).filter(v => v > 0).length;
+  const activeMixId = useMemo(() => {
+    return MIX_PRESETS.find((preset) => {
+      const brownMatches = Math.abs(preset.brownVolume - volume) < 0.005;
+      const waveMatches = preset.waveIntensity === waveIntensity;
+      const ambientsMatch = ALL_AMBIENTS.every((sound) => Math.abs(preset.ambientVolumes[sound] - ambientVolumes[sound]) < 0.005);
+      return brownMatches && waveMatches && ambientsMatch;
+    })?.id ?? null;
+  }, [ambientVolumes, volume, waveIntensity]);
+
+  const applyMix = (preset: MixPreset) => {
+    setVolume(preset.brownVolume);
+    setWaveIntensity(preset.waveIntensity);
+    ALL_AMBIENTS.forEach((sound) => setAmbientVolume(sound, preset.ambientVolumes[sound]));
+  };
+
+  const shuffleMix = () => {
+    const choices = MIX_PRESETS.filter((preset) => preset.id !== activeMixId);
+    const nextPreset = choices[Math.floor(Math.random() * choices.length)] || MIX_PRESETS[0];
+    applyMix(nextPreset);
+  };
+
+  const copyCurrentMixLink = async () => {
+    const params = encodeMixToSearchParams({
+      brownVolume: volume,
+      waveIntensity,
+      ambientVolumes,
+    });
+    const url = `${window.location.origin}${window.location.pathname}?${params}`;
+    window.history.replaceState(null, "", url);
+
+    try {
+      await navigator.clipboard.writeText(url);
+      setMixShareState("copied");
+    } catch {
+      setMixShareState("linked");
+    }
+
+    window.setTimeout(() => setMixShareState("idle"), 1800);
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col items-center p-4 md:p-6 relative overflow-hidden">
@@ -149,6 +194,15 @@ export default function Home() {
         </div>
 
         <WaveControl value={waveIntensity} onChange={setWaveIntensity} />
+
+        <MixPresets
+          presets={MIX_PRESETS}
+          activeMixId={activeMixId}
+          shareState={mixShareState}
+          onApply={applyMix}
+          onShuffle={shuffleMix}
+          onCopyLink={copyCurrentMixLink}
+        />
 
         <div className="w-full">
           <div className="flex items-center justify-between mb-3">

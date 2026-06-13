@@ -4,33 +4,39 @@
 
 Zen Noise now ships real recorded audio assets under `client/public/audio/`. The app plays those files through Web Audio in `client/src/hooks/use-audio-engine.ts`, so each sound has a real local audio source plus per-sound gain control.
 
-The previous procedural synthesis path was useful for prototyping, but the current app path is now recorded-sample-backed for more recognizable rain, coffee-room, storm, wind, birds, campfire, bowl, purr, and leaves textures. Licensing and attribution are documented in `docs/audio-sample-sources.md` and `client/public/audio/audio-sources.json`.
+The current pass improves authenticity and compatibility by replacing most OGG ambience assets with researched MP3 previews from CC0 Freesound recordings. Brown noise keeps a public-domain reference OGG and adds a generated fallback buffer for browsers that cannot decode OGG. Licensing and attribution are documented in `docs/audio-sample-sources.md` and `client/public/audio/audio-sources.json`.
 
 ## Current Sound Coverage
 
 | Requested sound | Current implementation | Review status |
 | --- | --- | --- |
-| Brown noise | `/audio/brown-noise.ogg` | Covered. Real local audio file with Web Audio gain control and wave modulation. |
-| Gentle rain | `/audio/rain.ogg` | Covered. Real rain recording. |
-| Coffee shop background | `/audio/coffee-shop.ogg` | Covered. Real restaurant/cafe-style room ambience recording. |
-| Gentle thunderstorms | `/audio/thunderstorm.ogg` | Covered. Real rain-and-thunder recording. |
-| Soft winds | `/audio/wind.ogg` | Covered. Real gentle breeze recording. |
-| Chirping birds | `/audio/birds.ogg` | Covered. Real birdsong recording. |
-| Crackling camp fire | `/audio/campfire.ogg` | Covered. Real campfire ambience recording. |
-| Tibetan bowl ringing | `/audio/tibetan-bowl.ogg` | Covered. Real Tibetan singing bowl recording. |
-| Sleeping cat purr | `/audio/cat-purr.ogg` | Covered. Real loopable purring recording. |
+| Brown noise | `/audio/brown-noise.ogg` plus generated fallback | Covered. Local audio file with Web Audio gain control and wave modulation; generated fallback protects OGG decode failures. |
+| Gentle rain | `/audio/rain.mp3` | Covered. Real gentle rain recording with softer transients than the previous heavier rain source. |
+| Coffee shop background | `/audio/coffee-shop.mp3` | Covered. Real cafeteria ambience recording. |
+| Gentle thunderstorms | `/audio/thunderstorm.mp3` | Covered. Real rain-and-distant-thunder recording. |
+| Soft winds | `/audio/wind.mp3` | Covered. Dedicated wind-in-trees recording without baked-in bird calls. |
+| Chirping birds | `/audio/birds.mp3` | Covered. Real morning birds recording, separate from wind. |
+| Crackling camp fire | `/audio/campfire.mp3` | Covered. Quiet nighttime campfire recording. |
+| Tibetan bowl ringing | `/audio/tibetan-bowl.mp3` | Covered. Real Tibetan singing bowl recording, now CC0. |
+| Sleeping cat purr | `/audio/cat-purr.mp3` | Covered. Real cat purr recording. |
 | Forest rustling leaves | `/audio/forest-leaves.wav` | Covered. Real rustling-leaves recording. |
 
-## Sound Engine Changes Made In This Pass
+## Deep Audio Research Findings
 
-- Added real recorded audio files for brown noise and every ambient layer.
-- Replaced the default procedural synthesis path with sample-backed Web Audio playback.
-- Added `SAMPLE_SOURCES` in `client/src/hooks/use-audio-engine.ts` so each app sound maps to a local audio file.
-- Added source/licensing metadata in `client/public/audio/audio-sources.json` and `docs/audio-sample-sources.md`.
-- Kept Web Audio gain nodes so each slider still controls its own sound independently.
-- Renamed the visible ambient labels from `Ring` to `Bowl` and from `Cats` to `Purr` so the controls match the intended sounds.
-- Added clamping for brown-noise and ambient-layer volume values so saved or slider-sent values stay between 0 and 1.
-- Added visible per-layer intensity readouts for each ambient slider.
+- The prior wind file included birds, which made the wind and birds controls less semantically accurate. The new wind file is a dedicated wind-in-trees recording.
+- The prior bowl file was CC BY-SA 4.0, which creates share-alike friction for redistribution. The replacement bowl file is CC0.
+- The prior campfire file was CC BY 3.0. The replacement is CC0 and was recorded in a quiet nighttime setting.
+- MP3 is now used for every ambience except forest leaves, which remains WAV. This is more compatible than relying on OGG ambience files.
+- Brown noise is a noise color rather than a field recording target. A generated fallback is acceptable because it preserves the expected acoustic profile when the browser cannot decode the bundled OGG.
+
+## Product Audio Changes Made In This Pass
+
+- Rewired ambience playback to MP3 assets for rain, coffee, storm, wind, birds, fire, bowl, and purr.
+- Added a generated brown-noise fallback buffer for browsers that cannot decode the brown-noise OGG file.
+- Replaced higher-friction CC BY and CC BY-SA assets with CC0 Freesound recordings where available.
+- Added six curated mixes in `client/src/lib/mix-presets.ts`.
+- Added shuffle and share-link controls in `client/src/components/MixPresets.tsx`.
+- Added URL mix encoding and decoding so a shared mix can reopen the same volume state.
 
 ## Deep Audio Wiring Analytics
 
@@ -46,7 +52,8 @@ The analyzer verifies:
 - Every requested ambient sound appears in the `AmbientSound` union, `ALL_AMBIENTS`, engine defaults, saved-volume defaults, and UI options.
 - Every requested sound maps to an existing local audio file in `SAMPLE_SOURCES`.
 - Every ambient tile has a button, slider test ID, visible intensity readout, and per-sound gain wiring.
-- Brown noise has a local audio file and Web Audio gain control.
+- Brown noise has a local audio file, Web Audio gain control, and generated fallback evidence.
+- Mix presets, shuffle, and share-link UI are wired.
 - The source manifest documents source pages, source files, licenses, and attribution.
 
 ## Slider Intensity Verification
@@ -64,12 +71,12 @@ Moving a slider calls `setAmbientVolume(sound, value)`, clamps the value to `0..
 
 | Priority | Sound | Why it fits Zen Noise | Implementation note |
 | --- | --- | --- | --- |
-| 1 | Ocean surf | Strong sleep association, natural low-frequency wash, pairs well with brown noise. | Pink/brown wave bed with slow swells and soft foam hiss. Avoid gulls by default. |
-| 2 | Creek or stream | Continuous, low-stress water movement that can mask speech without sharp events. | Layer filtered noise with small randomized bubble/pluck bursts. |
-| 3 | Soft fan or HVAC | Useful for users who want a familiar steady mechanical sleep sound. | Mostly brown/pink noise with subtle rotational modulation and no rattles. |
-| 4 | Night crickets | Natural nighttime cue, good for low-volume sleep ambience. | Sparse high-frequency pulses with strong volume cap and adjustable density. |
-| 5 | Light snowfall | Quiet granular texture with little semantic distraction. | Very soft filtered white noise grains with wide stereo placement. |
-| 6 | Distant train or city hush | Good optional comfort layer for urban sleepers. | Keep distant, low, and non-rhythmic; avoid horns, brakes, or sirens. |
+| 1 | Ocean surf | Strong sleep association, natural low-frequency wash, pairs well with brown noise. | Use a long real surf loop without gulls by default. |
+| 2 | Creek or stream | Continuous, low-stress water movement that can mask speech without sharp events. | Prefer real stream recordings with no hikers, voices, or birds baked in. |
+| 3 | Soft fan or HVAC | Familiar steady mechanical sleep sound. | A synthesized fallback is acceptable, but a real fan recording is better for recognition. |
+| 4 | Night crickets | Natural nighttime cue, good for low-volume sleep ambience. | Keep volume capped and avoid sudden close insect calls. |
+| 5 | Light snowfall | Quiet granular texture with little semantic distraction. | Real snow or soft granular Foley can work; avoid icy crunches. |
+| 6 | Distant train or city hush | Good optional comfort layer for urban sleepers. | Keep distant, low, and non-rhythmic; avoid horns, brakes, sirens, and announcements. |
 
 ## Sounds To Avoid Or Keep Optional
 
@@ -82,12 +89,14 @@ Moving a slider calls `setAmbientVolume(sound, value)`, clamps the value to `0..
 
 Before shipping major audio changes:
 
-1. Run `npm run check`.
-2. Run `npm run build`.
-3. Run `npm run verify:audio`.
+1. Run `npm run verify:audio`.
+2. Run `npm run check`.
+3. Run `npm run build`.
 4. Open the local app with `Start-Local-Site.cmd`.
 5. Test each ambient layer individually at 50 percent volume.
-6. Move each ambient slider down and back up; confirm the visible percentage and perceived layer intensity both change.
-7. Test layered playback with brown noise at 35-50 percent and two ambiences at 20-35 percent.
-8. Listen for clicks, obvious loops, harsh high-frequency events, and startling peaks.
-9. Confirm the timer fade still suspends playback cleanly.
+6. Apply each curated mix and confirm the visible sliders update.
+7. Use the share button, reopen the copied link, and confirm the same mix loads.
+8. Move each ambient slider down and back up; confirm the visible percentage and perceived layer intensity both change.
+9. Test layered playback with brown noise at 35-50 percent and two ambiences at 20-35 percent.
+10. Listen for clicks, obvious loops, harsh high-frequency events, and startling peaks.
+11. Confirm the timer fade still suspends playback cleanly.

@@ -1,8 +1,9 @@
-const CACHE_NAME = 'zen-noise-v4';
+const CACHE_NAME = 'zen-noise-v5';
 const ASSETS = [
   '/index.html',
   '/manifest.json',
-  '/favicon.png'
+  '/favicon.png',
+  '/audio/audio-sources.json'
 ];
 
 self.addEventListener('install', (e) => {
