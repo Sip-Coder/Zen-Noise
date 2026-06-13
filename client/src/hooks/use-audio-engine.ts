@@ -22,7 +22,7 @@ const SAMPLE_SOURCES: Record<AmbientSound | "brown", string> = {
   campfire: "/audio/campfire.mp3",
   ring: "/audio/tibetan-bowl.mp3",
   purring: "/audio/cat-purr.mp3",
-  forest: "/audio/forest-leaves.wav",
+  forest: "/audio/forest-leaves.mp3",
 };
 
 interface AudioEngineState {
@@ -195,12 +195,17 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
 
     const ctx = audioContextRef.current;
     const node = sampleNodesRef.current.get("brown");
-    if (!ctx || !node || !isPlayingRef.current) return;
+    if (!ctx || !node || !isPlayingRef.current || volumeRef.current <= 0) return;
 
     const tick = () => {
       if (!audioContextRef.current || !node || !isPlayingRef.current || audioContextRef.current.state !== "running") return;
 
       const baseVolume = volumeRef.current;
+      if (baseVolume <= 0) {
+        clearWaveTimer();
+        applyBrownGain(0);
+        return;
+      }
       const intensity = waveIntensityRef.current;
       const duration = intensity === "deep" ? 9 + Math.random() * 5 : 7 + Math.random() * 5;
       const depth = intensity === "deep" ? 0.42 : intensity === "gentle" ? 0.22 : 0.04;
@@ -216,7 +221,7 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
     };
 
     tick();
-  }, [clearWaveTimer]);
+  }, [applyBrownGain, clearWaveTimer]);
 
   const applyAmbientGain = useCallback((sound: AmbientSound, target: number, rampSeconds: number = 0.1) => {
     const ctx = audioContextRef.current;
@@ -242,7 +247,9 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
     }
 
     try {
-      await ensureSample("brown");
+      if (volumeRef.current > 0) {
+        await ensureSample("brown");
+      }
 
       await Promise.all(
         ALL_AMBIENTS
@@ -255,7 +262,7 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
       if (ctx.state === "suspended" || !isPlayingRef.current) {
         await ctx.resume();
         setIsPlaying(true);
-        scheduleWave();
+        if (volumeRef.current > 0) scheduleWave();
       } else {
         clearWaveTimer();
         await ctx.suspend();
@@ -294,7 +301,23 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
     const nextVol = clampVolume(newVol);
     setVolumeState(nextVol);
     volumeRef.current = nextVol;
-    applyBrownGain(nextVol);
+
+    if (nextVol <= 0) {
+      clearWaveTimer();
+      applyBrownGain(0);
+      return;
+    }
+
+    if (isPlayingRef.current) {
+      ensureSample("brown")
+        .then(() => {
+          applyBrownGain(nextVol);
+          scheduleWave();
+        })
+        .catch((error) => console.error("Could not load brown-noise sample", error));
+    } else {
+      applyBrownGain(nextVol);
+    }
   };
 
   const setAmbientVolume = useCallback((sound: AmbientSound, vol: number) => {
@@ -314,7 +337,7 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
   const setWaveIntensity = (val: WaveIntensity) => {
     setWaveIntensityState(val);
     waveIntensityRef.current = val;
-    if (isPlayingRef.current) scheduleWave();
+    if (isPlayingRef.current && volumeRef.current > 0) scheduleWave();
   };
 
   useEffect(() => {

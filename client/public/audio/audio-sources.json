@@ -99,12 +99,13 @@
   },
   {
     "sound": "forest",
-    "localFile": "/audio/forest-leaves.wav",
-    "sourceTitle": "Rustling leaves (Gravity Sound)",
-    "sourcePage": "https://commons.wikimedia.org/wiki/File:Rustling_leaves_(Gravity_Sound).wav",
-    "sourceFile": "https://upload.wikimedia.org/wikipedia/commons/d/db/Rustling_leaves_%28Gravity_Sound%29.wav",
-    "license": "CC BY 4.0",
-    "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
-    "attribution": "Gravity Sound"
+    "localFile": "/audio/forest-leaves.mp3",
+    "sourceTitle": "breeze.wav",
+    "sourcePage": "https://freesound.org/people/keweldog/sounds/181801/",
+    "sourceFile": "https://cdn.freesound.org/previews/181/181801_3153523-hq.mp3",
+    "license": "Creative Commons 0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution": "keweldog via Freesound, CC0",
+    "reviewNote": "Selected to replace the aggressive rustling-leaves WAV with a gentler breeze-through-pines recording."
   }
 ]

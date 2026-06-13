@@ -4,7 +4,7 @@
 
 Zen Noise now ships real recorded audio assets under `client/public/audio/`. The app plays those files through Web Audio in `client/src/hooks/use-audio-engine.ts`, so each sound has a real local audio source plus per-sound gain control.
 
-The current pass improves authenticity and compatibility by replacing most OGG ambience assets with researched MP3 previews from CC0 Freesound recordings. Brown noise keeps a public-domain reference OGG and adds a generated fallback buffer for browsers that cannot decode OGG. Licensing and attribution are documented in `docs/audio-sample-sources.md` and `client/public/audio/audio-sources.json`.
+The current pass improves authenticity and compatibility by replacing most OGG ambience assets with researched MP3 previews from CC0 Freesound recordings. Brown noise keeps a public-domain reference OGG and adds a generated fallback buffer for browsers that cannot decode OGG. Brown noise is now a standalone opt-in layer instead of part of the curated mixes, so ambient mixes stay lighter by default. Licensing and attribution are documented in `docs/audio-sample-sources.md` and `client/public/audio/audio-sources.json`.
 
 ## Current Sound Coverage
 
@@ -19,24 +19,27 @@ The current pass improves authenticity and compatibility by replacing most OGG a
 | Crackling camp fire | `/audio/campfire.mp3` | Covered. Quiet nighttime campfire recording. |
 | Tibetan bowl ringing | `/audio/tibetan-bowl.mp3` | Covered. Real Tibetan singing bowl recording, now CC0. |
 | Sleeping cat purr | `/audio/cat-purr.mp3` | Covered. Real cat purr recording. |
-| Forest rustling leaves | `/audio/forest-leaves.wav` | Covered. Real rustling-leaves recording. |
+| Forest rustling leaves | `/audio/forest-leaves.mp3` | Covered. Gentler breeze-through-pines recording, replacing the more aggressive rustling-leaves WAV. |
 
 ## Deep Audio Research Findings
 
 - The prior wind file included birds, which made the wind and birds controls less semantically accurate. The new wind file is a dedicated wind-in-trees recording.
 - The prior bowl file was CC BY-SA 4.0, which creates share-alike friction for redistribution. The replacement bowl file is CC0.
 - The prior campfire file was CC BY 3.0. The replacement is CC0 and was recorded in a quiet nighttime setting.
-- MP3 is now used for every ambience except forest leaves, which remains WAV. This is more compatible than relying on OGG ambience files.
+- MP3 is now used for every ambience layer. This is more compatible than relying on OGG ambience files and keeps the forest layer lighter than the prior WAV.
 - Brown noise is a noise color rather than a field recording target. A generated fallback is acceptable because it preserves the expected acoustic profile when the browser cannot decode the bundled OGG.
+- The prior forest leaves file felt too intense as a sleep layer, so it was replaced with a softer CC0 breeze-through-pines recording.
 
 ## Product Audio Changes Made In This Pass
 
 - Rewired ambience playback to MP3 assets for rain, coffee, storm, wind, birds, fire, bowl, and purr.
 - Added a generated brown-noise fallback buffer for browsers that cannot decode the brown-noise OGG file.
+- Moved brown noise out of curated mixes and share links.
+- Replaced the forest leaves WAV with a subtler MP3 breeze-through-pines recording.
 - Replaced higher-friction CC BY and CC BY-SA assets with CC0 Freesound recordings where available.
 - Added six curated mixes in `client/src/lib/mix-presets.ts`.
 - Added shuffle and share-link controls in `client/src/components/MixPresets.tsx`.
-- Added URL mix encoding and decoding so a shared mix can reopen the same volume state.
+- Added URL mix encoding and decoding so a shared mix can reopen the same ambient-layer state.
 
 ## Deep Audio Wiring Analytics
 
@@ -52,7 +55,7 @@ The analyzer verifies:
 - Every requested ambient sound appears in the `AmbientSound` union, `ALL_AMBIENTS`, engine defaults, saved-volume defaults, and UI options.
 - Every requested sound maps to an existing local audio file in `SAMPLE_SOURCES`.
 - Every ambient tile has a button, slider test ID, visible intensity readout, and per-sound gain wiring.
-- Brown noise has a local audio file, Web Audio gain control, and generated fallback evidence.
+- Brown noise has a local audio file, Web Audio gain control, generated fallback evidence, and an independent opt-in button.
 - Mix presets, shuffle, and share-link UI are wired.
 - The source manifest documents source pages, source files, licenses, and attribution.
 
@@ -95,8 +98,8 @@ Before shipping major audio changes:
 4. Open the local app with `Start-Local-Site.cmd`.
 5. Test each ambient layer individually at 50 percent volume.
 6. Apply each curated mix and confirm the visible sliders update.
-7. Use the share button, reopen the copied link, and confirm the same mix loads.
+7. Use the share button, reopen the copied link, and confirm the same ambient mix loads without forcing brown noise on.
 8. Move each ambient slider down and back up; confirm the visible percentage and perceived layer intensity both change.
-9. Test layered playback with brown noise at 35-50 percent and two ambiences at 20-35 percent.
+9. Turn on Brown Noise separately, then test layered playback with brown noise at 25-40 percent and two ambiences at 20-35 percent.
 10. Listen for clicks, obvious loops, harsh high-frequency events, and startling peaks.
 11. Confirm the timer fade still suspends playback cleanly.

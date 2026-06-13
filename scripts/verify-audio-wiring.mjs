@@ -27,7 +27,7 @@ const expectedSampleSources = {
   campfire: "/audio/campfire.mp3",
   ring: "/audio/tibetan-bowl.mp3",
   purring: "/audio/cat-purr.mp3",
-  forest: "/audio/forest-leaves.wav",
+  forest: "/audio/forest-leaves.mp3",
 };
 
 const expectedLabels = {
@@ -238,6 +238,14 @@ if (!ambientComponentText.includes("data-testid={`ambient-volume-${opt.value}`}"
 }
 
 [
+  "btn-brown-noise",
+  "brown_noise_enabled",
+  "changeBrownNoiseLevel",
+].forEach((needle) => {
+  if (!homeText.includes(needle)) failures.push(`Brown-noise independent control is missing source evidence: ${needle}.`);
+});
+
+[
   "fetchAudioBuffer",
   "decodeAudioData",
   "ctx.createBufferSource()",
@@ -262,6 +270,10 @@ if (!ambientComponentText.includes("data-testid={`ambient-volume-${opt.value}`}"
 ].forEach((needle) => {
   if (!mixPresetsText.includes(needle)) failures.push(`Mix preset wiring is missing source evidence: ${needle}.`);
 });
+
+if (mixPresetsText.includes("brownVolume") || mixPresetsText.includes("waveIntensity")) {
+  failures.push("Mix presets should not control brown noise volume or brown-noise wave intensity.");
+}
 
 [
   "btn-mix-shuffle",
@@ -308,7 +320,13 @@ const report = {
     engineText.includes("setTargetAtTime"),
   mixPresetsVerified: mixPresetsText.includes("MIX_PRESETS") &&
     mixPresetsComponentText.includes("btn-mix-share") &&
-    homeText.includes("copyCurrentMixLink"),
+    homeText.includes("copyCurrentMixLink") &&
+    !mixPresetsText.includes("brownVolume") &&
+    !mixPresetsText.includes("waveIntensity"),
+  brownNoiseStandaloneVerified: homeText.includes("btn-brown-noise") &&
+    homeText.includes("brown_noise_enabled") &&
+    engineText.includes("if (volumeRef.current > 0)") &&
+    engineText.includes("Could not load brown-noise sample"),
   documentationVerified: failures.filter((failure) => failure.includes("docs")).length === 0,
 };
 

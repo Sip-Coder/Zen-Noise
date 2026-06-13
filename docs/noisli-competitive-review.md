@@ -42,7 +42,8 @@ The gaps versus Noisli were:
 
 - Added six curated mixes: Focus, Sleep, Storm, Forest, Hearth, and Reset.
 - Added a shuffle control that jumps between curated mixes.
-- Added shareable mix links using URL parameters for brown volume, wave mode, and active ambience volumes.
+- Added shareable mix links using URL parameters for active ambience volumes.
+- Split brown noise into a standalone opt-in layer so curated mixes do not force the heavy low-frequency bed.
 - Replaced most ambience files with researched CC0 MP3 recordings.
 - Added MP3 assets for rain, coffee shop, thunderstorm, wind, birds, campfire, Tibetan bowl, and purr.
 - Kept the forest leaves WAV and brown-noise OGG, with a generated brown-noise fallback for decode failures.

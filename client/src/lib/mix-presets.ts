@@ -1,8 +1,6 @@
-import { ALL_AMBIENTS, type AmbientSound, type AmbientVolumes, type WaveIntensity } from "@/hooks/use-audio-engine";
+import { ALL_AMBIENTS, type AmbientSound, type AmbientVolumes } from "@/hooks/use-audio-engine";
 
 export interface MixState {
-  brownVolume: number;
-  waveIntensity: WaveIntensity;
   ambientVolumes: AmbientVolumes;
 }
 
@@ -24,8 +22,6 @@ export const DEFAULT_AMBIENT_VOLUMES: AmbientVolumes = {
   purring: 0,
   forest: 0,
 };
-
-const WAVE_VALUES: WaveIntensity[] = ["steady", "gentle", "deep"];
 
 export function clampVolume(value: number): number {
   if (!Number.isFinite(value)) return 0;
@@ -54,8 +50,6 @@ export const MIX_PRESETS: MixPreset[] = [
     label: "Focus",
     icon: "focus",
     accent: "text-sky-300",
-    brownVolume: 0.42,
-    waveIntensity: "steady",
     ambientVolumes: createAmbientVolumes({ coffee: 0.22, rain: 0.1 }),
   },
   {
@@ -63,8 +57,6 @@ export const MIX_PRESETS: MixPreset[] = [
     label: "Sleep",
     icon: "sleep",
     accent: "text-indigo-300",
-    brownVolume: 0.46,
-    waveIntensity: "gentle",
     ambientVolumes: createAmbientVolumes({ rain: 0.28, purring: 0.16, wind: 0.08 }),
   },
   {
@@ -72,8 +64,6 @@ export const MIX_PRESETS: MixPreset[] = [
     label: "Storm",
     icon: "rain",
     accent: "text-blue-300",
-    brownVolume: 0.36,
-    waveIntensity: "deep",
     ambientVolumes: createAmbientVolumes({ rain: 0.34, thunder: 0.18, campfire: 0.12 }),
   },
   {
@@ -81,17 +71,13 @@ export const MIX_PRESETS: MixPreset[] = [
     label: "Forest",
     icon: "forest",
     accent: "text-emerald-300",
-    brownVolume: 0.28,
-    waveIntensity: "gentle",
-    ambientVolumes: createAmbientVolumes({ forest: 0.28, birds: 0.17, wind: 0.12 }),
+    ambientVolumes: createAmbientVolumes({ forest: 0.22, birds: 0.14, wind: 0.08 }),
   },
   {
     id: "hearth",
     label: "Hearth",
     icon: "fire",
     accent: "text-orange-300",
-    brownVolume: 0.38,
-    waveIntensity: "gentle",
     ambientVolumes: createAmbientVolumes({ campfire: 0.24, purring: 0.18, wind: 0.06 }),
   },
   {
@@ -99,15 +85,9 @@ export const MIX_PRESETS: MixPreset[] = [
     label: "Reset",
     icon: "bowl",
     accent: "text-violet-300",
-    brownVolume: 0.24,
-    waveIntensity: "steady",
     ambientVolumes: createAmbientVolumes({ ring: 0.2, forest: 0.12, wind: 0.08 }),
   },
 ];
-
-function isWaveIntensity(value: string | null): value is WaveIntensity {
-  return WAVE_VALUES.includes(value as WaveIntensity);
-}
 
 function toPercent(value: number): string {
   return Math.round(clampVolume(value) * 100).toString();
@@ -123,9 +103,6 @@ function fromPercent(value: string | null): number | undefined {
 export function encodeMixToSearchParams(mix: MixState): string {
   const params = new URLSearchParams();
 
-  params.set("brown", toPercent(mix.brownVolume));
-  params.set("wave", mix.waveIntensity);
-
   ALL_AMBIENTS.forEach((sound) => {
     const volume = clampVolume(mix.ambientVolumes[sound]);
     if (volume > 0) {
@@ -138,11 +115,7 @@ export function encodeMixToSearchParams(mix: MixState): string {
 
 export function decodeMixFromSearch(search: string): MixState | null {
   const params = new URLSearchParams(search);
-  const wave = params.get("wave");
-  const hasMixParams =
-    params.has("brown") ||
-    params.has("wave") ||
-    ALL_AMBIENTS.some((sound) => params.has(sound));
+  const hasMixParams = ALL_AMBIENTS.some((sound) => params.has(sound));
 
   if (!hasMixParams) return null;
 
@@ -155,8 +128,6 @@ export function decodeMixFromSearch(search: string): MixState | null {
   });
 
   return {
-    brownVolume: fromPercent(params.get("brown")) ?? 0.5,
-    waveIntensity: isWaveIntensity(wave) ? wave : "steady",
     ambientVolumes,
   };
 }

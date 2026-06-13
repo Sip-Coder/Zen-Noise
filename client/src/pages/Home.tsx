@@ -10,12 +10,13 @@ import { MixPresets } from "@/components/MixPresets";
 import {
   DEFAULT_AMBIENT_VOLUMES,
   MIX_PRESETS,
+  clampVolume,
   decodeMixFromSearch,
   encodeMixToSearchParams,
   normalizeAmbientVolumes,
   type MixPreset,
 } from "@/lib/mix-presets";
-import { Play, Pause, Moon, Info } from "lucide-react";
+import { Play, Pause, Moon, Info, Waves } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
@@ -43,16 +44,27 @@ function loadSavedAmbientVolumes(): AmbientVolumes {
   return { ...DEFAULT_AMBIENT_VOLUMES };
 }
 
+function loadSavedBrownVolume(): number {
+  const saved = Number(localStorage.getItem('brown_noise_volume') || '0.35');
+  const normalized = clampVolume(saved);
+  return normalized > 0 ? normalized : 0.35;
+}
+
+function loadSavedBrownEnabled(): boolean {
+  return localStorage.getItem('brown_noise_enabled') === 'true';
+}
+
 export default function Home() {
   const initialMix = useMemo(() => decodeMixFromSearch(window.location.search), []);
-  const savedVolume = initialMix?.brownVolume ?? parseFloat(localStorage.getItem('brown_noise_volume') || '0.5');
-  const savedWave = initialMix?.waveIntensity ?? ((localStorage.getItem('brown_noise_wave') as WaveIntensity) || 'steady');
+  const savedWave = (localStorage.getItem('brown_noise_wave') as WaveIntensity) || 'steady';
   const savedAmbientVolumes = initialMix?.ambientVolumes ?? loadSavedAmbientVolumes();
+  const savedBrownVolume = loadSavedBrownVolume();
+  const [brownNoiseEnabled, setBrownNoiseEnabled] = useState(loadSavedBrownEnabled);
+  const [brownNoiseLevel, setBrownNoiseLevel] = useState(savedBrownVolume);
   const [mixShareState, setMixShareState] = useState<"idle" | "copied" | "linked">("idle");
 
   const {
     isPlaying,
-    volume,
     waveIntensity,
     ambientVolumes,
     togglePlay,
@@ -60,11 +72,15 @@ export default function Home() {
     setWaveIntensity,
     setAmbientVolume,
     stopWithFade
-  } = useAudioEngine(savedVolume, savedAmbientVolumes);
+  } = useAudioEngine(brownNoiseEnabled ? savedBrownVolume : 0, savedAmbientVolumes);
 
   useEffect(() => {
-    localStorage.setItem('brown_noise_volume', volume.toString());
-  }, [volume]);
+    localStorage.setItem('brown_noise_volume', brownNoiseLevel.toString());
+  }, [brownNoiseLevel]);
+
+  useEffect(() => {
+    localStorage.setItem('brown_noise_enabled', brownNoiseEnabled ? 'true' : 'false');
+  }, [brownNoiseEnabled]);
 
   useEffect(() => {
     setWaveIntensity(savedWave);
@@ -85,16 +101,31 @@ export default function Home() {
   const activeCount = Object.values(ambientVolumes).filter(v => v > 0).length;
   const activeMixId = useMemo(() => {
     return MIX_PRESETS.find((preset) => {
-      const brownMatches = Math.abs(preset.brownVolume - volume) < 0.005;
-      const waveMatches = preset.waveIntensity === waveIntensity;
       const ambientsMatch = ALL_AMBIENTS.every((sound) => Math.abs(preset.ambientVolumes[sound] - ambientVolumes[sound]) < 0.005);
-      return brownMatches && waveMatches && ambientsMatch;
+      return ambientsMatch;
     })?.id ?? null;
-  }, [ambientVolumes, volume, waveIntensity]);
+  }, [ambientVolumes]);
+
+  const toggleBrownNoise = () => {
+    const nextEnabled = !brownNoiseEnabled;
+    setBrownNoiseEnabled(nextEnabled);
+    setVolume(nextEnabled ? brownNoiseLevel : 0);
+  };
+
+  const changeBrownNoiseLevel = (nextLevel: number) => {
+    const normalized = clampVolume(nextLevel);
+    if (normalized <= 0) {
+      setBrownNoiseEnabled(false);
+      setVolume(0);
+      return;
+    }
+
+    setBrownNoiseLevel(normalized);
+    setBrownNoiseEnabled(true);
+    setVolume(normalized);
+  };
 
   const applyMix = (preset: MixPreset) => {
-    setVolume(preset.brownVolume);
-    setWaveIntensity(preset.waveIntensity);
     ALL_AMBIENTS.forEach((sound) => setAmbientVolume(sound, preset.ambientVolumes[sound]));
   };
 
@@ -106,11 +137,11 @@ export default function Home() {
 
   const copyCurrentMixLink = async () => {
     const params = encodeMixToSearchParams({
-      brownVolume: volume,
-      waveIntensity,
       ambientVolumes,
     });
-    const url = `${window.location.origin}${window.location.pathname}?${params}`;
+    const url = params
+      ? `${window.location.origin}${window.location.pathname}?${params}`
+      : `${window.location.origin}${window.location.pathname}`;
     window.history.replaceState(null, "", url);
 
     try {
@@ -184,16 +215,42 @@ export default function Home() {
             </motion.button>
           </div>
 
-          <div className="flex-1 space-y-1.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-widest">Brown Noise</span>
-              <span className="text-xs text-muted-foreground/50 font-mono">{Math.round(volume * 100)}%</span>
+          <button
+            type="button"
+            onClick={toggleBrownNoise}
+            aria-pressed={brownNoiseEnabled}
+            data-testid="btn-brown-noise"
+            className={cn(
+              "flex-1 min-h-16 rounded-2xl border px-4 text-left transition-all duration-200",
+              brownNoiseEnabled
+                ? "border-primary/35 bg-primary/15 shadow-lg shadow-primary/10"
+                : "border-white/[0.05] bg-white/[0.03] hover:border-white/10 hover:bg-white/[0.06]"
+            )}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "w-10 h-10 rounded-full flex items-center justify-center transition-colors",
+                  brownNoiseEnabled ? "bg-primary/20 text-primary" : "bg-white/[0.04] text-muted-foreground/60"
+                )}>
+                  <Waves className="w-5 h-5" />
+                </div>
+                <div className="space-y-0.5">
+                  <div className="text-sm font-semibold text-foreground/90">Brown Noise</div>
+                  <div className="text-[11px] text-muted-foreground/55">{brownNoiseEnabled ? "On" : "Off"}</div>
+                </div>
+              </div>
+              <span className="text-xs text-muted-foreground/50 font-mono">{brownNoiseEnabled ? `${Math.round(brownNoiseLevel * 100)}%` : "0%"}</span>
             </div>
-            <VolumeSlider volume={volume} onVolumeChange={setVolume} compact />
-          </div>
+          </button>
         </div>
 
-        <WaveControl value={waveIntensity} onChange={setWaveIntensity} />
+        {brownNoiseEnabled && (
+          <div className="w-full rounded-2xl border border-white/[0.05] bg-white/[0.03] p-4 space-y-4" data-testid="brown-noise-panel">
+            <VolumeSlider volume={brownNoiseLevel} onVolumeChange={changeBrownNoiseLevel} compact />
+            <WaveControl value={waveIntensity} onChange={setWaveIntensity} />
+          </div>
+        )}
 
         <MixPresets
           presets={MIX_PRESETS}
