@@ -54,9 +54,18 @@ function loadSavedBrownEnabled(): boolean {
   return localStorage.getItem('brown_noise_enabled') === 'true';
 }
 
+const MODULATION_VALUES: WaveIntensity[] = ["steady", "gentle", "deep"];
+
+function loadSavedLayerModulation(): WaveIntensity {
+  const saved = localStorage.getItem('layer_modulation_intensity')
+    || localStorage.getItem('brown_noise_wave');
+
+  return MODULATION_VALUES.includes(saved as WaveIntensity) ? saved as WaveIntensity : 'steady';
+}
+
 export default function Home() {
   const initialMix = useMemo(() => decodeMixFromSearch(window.location.search), []);
-  const savedWave = (localStorage.getItem('brown_noise_wave') as WaveIntensity) || 'steady';
+  const savedWave = loadSavedLayerModulation();
   const savedAmbientVolumes = initialMix?.ambientVolumes ?? loadSavedAmbientVolumes();
   const savedBrownVolume = loadSavedBrownVolume();
   const [brownNoiseEnabled, setBrownNoiseEnabled] = useState(loadSavedBrownEnabled);
@@ -87,7 +96,8 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('brown_noise_wave', waveIntensity);
+    localStorage.setItem('layer_modulation_intensity', waveIntensity);
+    localStorage.removeItem('brown_noise_wave');
   }, [waveIntensity]);
 
   useEffect(() => {
@@ -246,11 +256,14 @@ export default function Home() {
         </div>
 
         {brownNoiseEnabled && (
-          <div className="w-full rounded-2xl border border-white/[0.05] bg-white/[0.03] p-4 space-y-4" data-testid="brown-noise-panel">
+          <div className="w-full rounded-2xl border border-white/[0.05] bg-white/[0.03] p-4" data-testid="brown-noise-panel">
             <VolumeSlider volume={brownNoiseLevel} onVolumeChange={changeBrownNoiseLevel} compact />
-            <WaveControl value={waveIntensity} onChange={setWaveIntensity} />
           </div>
         )}
+
+        <div className="w-full rounded-2xl border border-white/[0.05] bg-white/[0.03] p-4" data-testid="layer-modulation-panel">
+          <WaveControl value={waveIntensity} onChange={setWaveIntensity} />
+        </div>
 
         <MixPresets
           presets={MIX_PRESETS}

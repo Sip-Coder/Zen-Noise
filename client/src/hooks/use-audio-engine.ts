@@ -45,9 +45,72 @@ interface SampleNode {
   loading?: Promise<void>;
 }
 
+interface ModulationProfile {
+  cycleSeconds: number;
+  starLift: number;
+  starFloor: number;
+  bedDuck: number;
+  singleDepth: number;
+}
+
 function clampVolume(value: number): number {
   if (!Number.isFinite(value)) return 0;
   return Math.max(0, Math.min(1, value));
+}
+
+function getModulationProfile(intensity: WaveIntensity): ModulationProfile {
+  if (intensity === "deep") {
+    return {
+      cycleSeconds: 7 + Math.random() * 4,
+      starLift: 0.32,
+      starFloor: 0.025,
+      bedDuck: 0.18,
+      singleDepth: 0.22,
+    };
+  }
+
+  if (intensity === "gentle") {
+    return {
+      cycleSeconds: 8 + Math.random() * 4,
+      starLift: 0.18,
+      starFloor: 0.015,
+      bedDuck: 0.1,
+      singleDepth: 0.12,
+    };
+  }
+
+  return {
+    cycleSeconds: 10 + Math.random() * 5,
+    starLift: 0.06,
+    starFloor: 0.005,
+    bedDuck: 0.03,
+    singleDepth: 0.025,
+  };
+}
+
+function holdGainAtCurrentValue(param: AudioParam, now: number) {
+  const cancellable = param as AudioParam & { cancelAndHoldAtTime?: (time: number) => AudioParam };
+
+  if (typeof cancellable.cancelAndHoldAtTime === "function") {
+    cancellable.cancelAndHoldAtTime(now);
+    return;
+  }
+
+  const current = Math.max(0.0001, param.value);
+  param.cancelScheduledValues(now);
+  param.setValueAtTime(current, now);
+}
+
+function starGainTarget(baseVolume: number, profile: ModulationProfile): number {
+  return clampVolume(baseVolume * (1 + profile.starLift) + profile.starFloor);
+}
+
+function bedGainTarget(baseVolume: number, profile: ModulationProfile): number {
+  return Math.max(0.0001, clampVolume(baseVolume * (1 - profile.bedDuck)));
+}
+
+function singleLayerLowTarget(baseVolume: number, profile: ModulationProfile): number {
+  return Math.max(0.0001, clampVolume(baseVolume * (1 - profile.singleDepth)));
 }
 
 function normalizeAmbientVolumes(volumes?: Partial<AmbientVolumes>): AmbientVolumes {
@@ -107,7 +170,8 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const sampleNodesRef = useRef<Map<SampleSound, SampleNode>>(new Map());
-  const waveIntervalRef = useRef<number | null>(null);
+  const modulationTimerRef = useRef<number | null>(null);
+  const modulationIndexRef = useRef(0);
   const fadeTimeoutRef = useRef<number | null>(null);
 
   const isPlayingRef = useRef(isPlaying);
@@ -122,6 +186,18 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
 
   const getTargetVolume = useCallback((sound: SampleSound): number => {
     return sound === "brown" ? volumeRef.current : ambientVolumesRef.current[sound];
+  }, []);
+
+  const getActiveSampleSounds = useCallback((): SampleSound[] => {
+    const activeSounds: SampleSound[] = [];
+
+    ALL_AMBIENTS.forEach((sound) => {
+      if (ambientVolumesRef.current[sound] > 0) activeSounds.push(sound);
+    });
+
+    if (volumeRef.current > 0) activeSounds.push("brown");
+
+    return activeSounds;
   }, []);
 
   const getAudioContext = useCallback((): AudioContext => {
@@ -173,10 +249,10 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
     return node.loading;
   }, [getAudioContext, getSampleNode]);
 
-  const clearWaveTimer = useCallback(() => {
-    if (waveIntervalRef.current !== null) {
-      window.clearTimeout(waveIntervalRef.current);
-      waveIntervalRef.current = null;
+  const clearModulationTimer = useCallback(() => {
+    if (modulationTimerRef.current !== null) {
+      window.clearTimeout(modulationTimerRef.current);
+      modulationTimerRef.current = null;
     }
   }, []);
 
@@ -190,38 +266,62 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
     node.gain.gain.setTargetAtTime(clampVolume(target), now, rampSeconds);
   }, []);
 
-  const scheduleWave = useCallback(() => {
-    clearWaveTimer();
+  const scheduleLayerModulation = useCallback(() => {
+    clearModulationTimer();
 
     const ctx = audioContextRef.current;
-    const node = sampleNodesRef.current.get("brown");
-    if (!ctx || !node || !isPlayingRef.current || volumeRef.current <= 0) return;
+    if (!ctx || !isPlayingRef.current || getActiveSampleSounds().length === 0) return;
 
     const tick = () => {
-      if (!audioContextRef.current || !node || !isPlayingRef.current || audioContextRef.current.state !== "running") return;
+      const liveCtx = audioContextRef.current;
+      if (!liveCtx || !isPlayingRef.current || liveCtx.state !== "running") return;
 
-      const baseVolume = volumeRef.current;
-      if (baseVolume <= 0) {
-        clearWaveTimer();
-        applyBrownGain(0);
+      const activeSounds = getActiveSampleSounds().filter((sound) => {
+        const node = sampleNodesRef.current.get(sound);
+        return Boolean(node) && getTargetVolume(sound) > 0;
+      });
+
+      if (activeSounds.length === 0) {
+        clearModulationTimer();
         return;
       }
-      const intensity = waveIntensityRef.current;
-      const duration = intensity === "deep" ? 9 + Math.random() * 5 : 7 + Math.random() * 5;
-      const depth = intensity === "deep" ? 0.42 : intensity === "gentle" ? 0.22 : 0.04;
-      const now = audioContextRef.current.currentTime;
-      const low = Math.max(0.01, baseVolume * (1 - depth));
 
-      node.gain.gain.cancelScheduledValues(now);
-      node.gain.gain.setValueAtTime(Math.max(0.001, node.gain.gain.value), now);
-      node.gain.gain.linearRampToValueAtTime(baseVolume, now + duration * 0.45);
-      node.gain.gain.linearRampToValueAtTime(low, now + duration);
+      const profile = getModulationProfile(waveIntensityRef.current);
+      const starSound = activeSounds[modulationIndexRef.current % activeSounds.length];
+      modulationIndexRef.current = (modulationIndexRef.current + 1) % activeSounds.length;
+      const now = liveCtx.currentTime;
 
-      waveIntervalRef.current = window.setTimeout(tick, duration * 1000);
+      activeSounds.forEach((sound) => {
+        const node = sampleNodesRef.current.get(sound);
+        if (!node) return;
+
+        const baseVolume = clampVolume(getTargetVolume(sound));
+        const param = node.gain.gain;
+
+        holdGainAtCurrentValue(param, now);
+
+        if (activeSounds.length === 1) {
+          const low = singleLayerLowTarget(baseVolume, profile);
+          param.linearRampToValueAtTime(baseVolume, now + profile.cycleSeconds * 0.3);
+          param.linearRampToValueAtTime(low, now + profile.cycleSeconds * 0.75);
+          param.linearRampToValueAtTime(baseVolume, now + profile.cycleSeconds);
+          return;
+        }
+
+        const target = sound === starSound
+          ? starGainTarget(baseVolume, profile)
+          : bedGainTarget(baseVolume, profile);
+
+        param.linearRampToValueAtTime(target, now + profile.cycleSeconds * 0.32);
+        param.linearRampToValueAtTime(target, now + profile.cycleSeconds * 0.68);
+        param.linearRampToValueAtTime(baseVolume, now + profile.cycleSeconds);
+      });
+
+      modulationTimerRef.current = window.setTimeout(tick, profile.cycleSeconds * 1000);
     };
 
     tick();
-  }, [applyBrownGain, clearWaveTimer]);
+  }, [clearModulationTimer, getActiveSampleSounds, getTargetVolume]);
 
   const applyAmbientGain = useCallback((sound: AmbientSound, target: number, rampSeconds: number = 0.1) => {
     const ctx = audioContextRef.current;
@@ -261,10 +361,12 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
 
       if (ctx.state === "suspended" || !isPlayingRef.current) {
         await ctx.resume();
+        isPlayingRef.current = true;
         setIsPlaying(true);
-        if (volumeRef.current > 0) scheduleWave();
+        scheduleLayerModulation();
       } else {
-        clearWaveTimer();
+        isPlayingRef.current = false;
+        clearModulationTimer();
         await ctx.suspend();
         setIsPlaying(false);
       }
@@ -277,7 +379,7 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
     const ctx = audioContextRef.current;
     if (!ctx) return;
 
-    clearWaveTimer();
+    clearModulationTimer();
 
     const now = ctx.currentTime;
     sampleNodesRef.current.forEach((node) => {
@@ -292,6 +394,7 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
 
     fadeTimeoutRef.current = window.setTimeout(() => {
       ctx.suspend();
+      isPlayingRef.current = false;
       setIsPlaying(false);
       resetGainsToCurrentState();
     }, durationSec * 1000);
@@ -303,8 +406,8 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
     volumeRef.current = nextVol;
 
     if (nextVol <= 0) {
-      clearWaveTimer();
       applyBrownGain(0);
+      if (isPlayingRef.current) scheduleLayerModulation();
       return;
     }
 
@@ -312,7 +415,7 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
       ensureSample("brown")
         .then(() => {
           applyBrownGain(nextVol);
-          scheduleWave();
+          scheduleLayerModulation();
         })
         .catch((error) => console.error("Could not load brown-noise sample", error));
     } else {
@@ -327,17 +430,21 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
 
     if (nextVol > 0 && isPlayingRef.current) {
       ensureSample(sound)
-        .then(() => applyAmbientGain(sound, nextVol))
+        .then(() => {
+          applyAmbientGain(sound, nextVol);
+          scheduleLayerModulation();
+        })
         .catch((error) => console.error(`Could not load ${sound} sample`, error));
     } else {
       applyAmbientGain(sound, nextVol);
+      if (isPlayingRef.current) scheduleLayerModulation();
     }
-  }, [applyAmbientGain, ensureSample]);
+  }, [applyAmbientGain, ensureSample, scheduleLayerModulation]);
 
   const setWaveIntensity = (val: WaveIntensity) => {
     setWaveIntensityState(val);
     waveIntensityRef.current = val;
-    if (isPlayingRef.current && volumeRef.current > 0) scheduleWave();
+    if (isPlayingRef.current && getActiveSampleSounds().length > 0) scheduleLayerModulation();
   };
 
   useEffect(() => {
@@ -357,7 +464,7 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
     }
 
     return () => {
-      clearWaveTimer();
+      clearModulationTimer();
       if (fadeTimeoutRef.current !== null) {
         window.clearTimeout(fadeTimeoutRef.current);
       }
@@ -375,7 +482,7 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible" && isPlayingRef.current && audioContextRef.current?.state === "suspended") {
-        audioContextRef.current.resume();
+        audioContextRef.current.resume().then(() => scheduleLayerModulation());
       }
     };
 

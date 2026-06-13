@@ -45,8 +45,9 @@ The gaps versus Noisli were:
 - Added shareable mix links using URL parameters for active ambience volumes.
 - Split brown noise into a standalone opt-in layer so curated mixes do not force the heavy low-frequency bed.
 - Replaced most ambience files with researched CC0 MP3 recordings.
-- Added MP3 assets for rain, coffee shop, thunderstorm, wind, birds, campfire, Tibetan bowl, and purr.
-- Kept the forest leaves WAV and brown-noise OGG, with a generated brown-noise fallback for decode failures.
+- Added MP3 assets for rain, coffee shop, thunderstorm, wind, birds, campfire, Tibetan bowl, purr, and forest leaves.
+- Kept the brown-noise OGG, with a generated brown-noise fallback for decode failures.
+- Extended modulation across all active layers so one sound briefly rises as the current focus while the rest soften, then the focus rotates.
 - Updated audio source documentation, manifest metadata, and audio wiring verification.
 
 ## Still Worth Building Later
@@ -55,7 +56,7 @@ The gaps versus Noisli were:
 | --- | --- |
 | Favorites | Add a named local favorites drawer with rename, delete, reorder, and share controls. |
 | Automatic shuffle | Let users cycle through saved mixes every 15/30/60 minutes with a crossfade. |
-| Oscillation | Extend brown-noise modulation to optional per-layer slow volume drift. |
+| Oscillation depth | Add per-sound opt-outs, custom depth, and custom tempo for users who want finer modulation control. |
 | Timer sessions | Add Focus/Break loops, long breaks, tab title countdown, and optional notification. |
 | Catalog depth | Add ocean, stream, fan, crickets, snowfall, distant train, city hush, and white/pink noise. |
 | Offline confidence | Pre-cache selected active sounds after first play and expose install/offline readiness in QA. |

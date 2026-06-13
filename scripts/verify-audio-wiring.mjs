@@ -246,6 +246,13 @@ if (!ambientComponentText.includes("data-testid={`ambient-volume-${opt.value}`}"
 });
 
 [
+  "layer_modulation_intensity",
+  "layer-modulation-panel",
+].forEach((needle) => {
+  if (!homeText.includes(needle)) failures.push(`Global layer modulation UI is missing source evidence: ${needle}.`);
+});
+
+[
   "fetchAudioBuffer",
   "decodeAudioData",
   "ctx.createBufferSource()",
@@ -255,6 +262,18 @@ if (!ambientComponentText.includes("data-testid={`ambient-volume-${opt.value}`}"
   "createBrownNoiseBuffer",
 ].forEach((needle) => {
   if (!engineText.includes(needle)) failures.push(`Sample-backed engine is missing source evidence: ${needle}.`);
+});
+
+[
+  "getActiveSampleSounds",
+  "scheduleLayerModulation",
+  "modulationIndexRef",
+  "starSound",
+  "starGainTarget",
+  "bedGainTarget",
+  "holdGainAtCurrentValue",
+].forEach((needle) => {
+  if (!engineText.includes(needle)) failures.push(`Layer modulation engine is missing source evidence: ${needle}.`);
 });
 
 [
@@ -327,6 +346,12 @@ const report = {
     homeText.includes("brown_noise_enabled") &&
     engineText.includes("if (volumeRef.current > 0)") &&
     engineText.includes("Could not load brown-noise sample"),
+  layerModulationVerified: homeText.includes("layer-modulation-panel") &&
+    homeText.includes("layer_modulation_intensity") &&
+    engineText.includes("scheduleLayerModulation") &&
+    engineText.includes("getActiveSampleSounds") &&
+    engineText.includes("starGainTarget") &&
+    engineText.includes("bedGainTarget"),
   documentationVerified: failures.filter((failure) => failure.includes("docs")).length === 0,
 };
 
