@@ -28,6 +28,35 @@ That is a good fit for this product: no licensing risk, no large downloads, no l
 - Normalized generated brown noise instead of clipping samples at `-1` and `1`.
 - Reduced sharp or surprising transient density in coffee shop, thunder, birds, campfire, and Tibetan bowl layers.
 - Renamed the visible ambient labels from `Ring` to `Bowl` and from `Cats` to `Purr` so the controls match the intended sounds.
+- Added clamping for brown-noise and ambient-layer volume values so saved or slider-sent values stay between 0 and 1.
+- Added visible per-layer intensity readouts for each ambient slider.
+
+## Deep Audio Wiring Analytics
+
+Run this repo-level check after sound changes:
+
+```bash
+npm run verify:audio
+```
+
+The analyzer verifies:
+
+- The app has no bundled audio sample files, so the current sound path is procedural Web Audio.
+- Every requested ambient sound appears in the `AmbientSound` union, `ALL_AMBIENTS`, engine defaults, saved-volume defaults, and UI options.
+- Every ambient tile has a button, slider test ID, visible intensity readout, and per-sound gain wiring.
+- Brown noise uses the generated brown-noise path with normalization and loop crossfading.
+- This review document still covers the requested sound set and the additional calming-sound backlog.
+
+## Slider Intensity Verification
+
+Each ambient tile has:
+
+- a button test id: `btn-ambient-{sound}`
+- a slider test id: `slider-ambient-{sound}`
+- a visible percentage test id: `ambient-volume-{sound}`
+- a `data-volume` value on the tile
+
+Moving a slider calls `setAmbientVolume(sound, value)`, clamps the value to `0..1`, updates React state, updates the visible percentage, and writes the same value into that sound's dedicated `GainNode` with `setTargetAtTime`.
 
 ## Additional Calming Sounds To Add Next
 
@@ -53,9 +82,10 @@ Before shipping major audio changes:
 
 1. Run `npm run check`.
 2. Run `npm run build`.
-3. Open the local app with `Start-Local-Site.cmd`.
-4. Test each ambient layer individually at 50 percent volume.
-5. Test layered playback with brown noise at 35-50 percent and two ambiences at 20-35 percent.
-6. Listen for clicks, obvious loops, harsh high-frequency events, and startling peaks.
-7. Confirm the timer fade still suspends playback cleanly.
-
+3. Run `npm run verify:audio`.
+4. Open the local app with `Start-Local-Site.cmd`.
+5. Test each ambient layer individually at 50 percent volume.
+6. Move each ambient slider down and back up; confirm the visible percentage and perceived layer intensity both change.
+7. Test layered playback with brown noise at 35-50 percent and two ambiences at 20-35 percent.
+8. Listen for clicks, obvious loops, harsh high-frequency events, and startling peaks.
+9. Confirm the timer fade still suspends playback cleanly.

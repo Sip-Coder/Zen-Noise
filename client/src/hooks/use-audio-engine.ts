@@ -14,6 +14,23 @@ const DEFAULT_VOLUMES: AmbientVolumes = {
 
 const LOOP_CROSSFADE_SECONDS = 0.12;
 
+function clampVolume(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(1, value));
+}
+
+function normalizeAmbientVolumes(volumes?: Partial<AmbientVolumes>): AmbientVolumes {
+  const next = { ...DEFAULT_VOLUMES };
+
+  ALL_AMBIENTS.forEach((sound) => {
+    if (volumes?.[sound] !== undefined) {
+      next[sound] = clampVolume(Number(volumes[sound]));
+    }
+  });
+
+  return next;
+}
+
 interface AudioEngineState {
   isPlaying: boolean;
   volume: number;
@@ -195,9 +212,9 @@ function scheduleNoiseBurst(ctx: AudioContext, destination: AudioNode, options: 
 
 export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolumes?: AmbientVolumes): AudioEngineState {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolumeState] = useState(initialVolume);
+  const [volume, setVolumeState] = useState(clampVolume(initialVolume));
   const [waveIntensity, setWaveIntensityState] = useState<WaveIntensity>("steady");
-  const [ambientVolumes, setAmbientVolumes] = useState<AmbientVolumes>({ ...DEFAULT_VOLUMES, ...initialAmbientVolumes });
+  const [ambientVolumes, setAmbientVolumes] = useState<AmbientVolumes>(() => normalizeAmbientVolumes(initialAmbientVolumes));
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const gainNodeRef = useRef<GainNode | null>(null);
@@ -548,17 +565,19 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
   };
 
   const setVolume = (newVol: number) => {
-    setVolumeState(newVol);
+    const nextVol = clampVolume(newVol);
+    setVolumeState(nextVol);
     if (masterGainRef.current && audioContextRef.current) {
-      masterGainRef.current.gain.setTargetAtTime(newVol, audioContextRef.current.currentTime, 0.1);
+      masterGainRef.current.gain.setTargetAtTime(nextVol, audioContextRef.current.currentTime, 0.1);
     }
   };
 
   const setAmbientVolume = useCallback((sound: AmbientSound, vol: number) => {
-    setAmbientVolumes(prev => ({ ...prev, [sound]: vol }));
+    const nextVol = clampVolume(vol);
+    setAmbientVolumes(prev => ({ ...prev, [sound]: nextVol }));
     const ug = ambientUserGainsRef.current[sound];
     if (ug && audioContextRef.current) {
-      ug.gain.setTargetAtTime(vol, audioContextRef.current.currentTime, 0.1);
+      ug.gain.setTargetAtTime(nextVol, audioContextRef.current.currentTime, 0.1);
     }
   }, []);
 

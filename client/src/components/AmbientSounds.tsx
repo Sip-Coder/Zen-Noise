@@ -55,6 +55,7 @@ export function AmbientSounds({ ambientVolumes, onVolumeChange }: AmbientSoundsP
             <div
               key={opt.value}
               data-testid={`ambient-tile-${opt.value}`}
+              data-volume={vol.toFixed(2)}
               className={cn(
                 "relative flex flex-col items-center rounded-2xl transition-all duration-300 overflow-hidden",
                 isActive
@@ -64,6 +65,8 @@ export function AmbientSounds({ ambientVolumes, onVolumeChange }: AmbientSoundsP
             >
               <button
                 data-testid={`btn-ambient-${opt.value}`}
+                aria-label={`${isActive ? "Disable" : "Enable"} ${opt.label}`}
+                aria-pressed={isActive}
                 onClick={() => onVolumeChange(opt.value, isActive ? 0 : 0.5)}
                 className="w-full pt-4 pb-2 flex flex-col items-center gap-1.5"
               >
@@ -86,8 +89,17 @@ export function AmbientSounds({ ambientVolumes, onVolumeChange }: AmbientSoundsP
 
               <div className={cn(
                 "w-full px-3 pb-3 transition-all duration-300",
-                isActive ? "opacity-100 h-10" : "opacity-0 h-0 overflow-hidden"
+                isActive ? "opacity-100 h-14" : "opacity-0 h-0 overflow-hidden"
               )}>
+                <div className="flex items-center justify-between text-[10px] leading-none text-muted-foreground/45 mb-1">
+                  <span>Intensity</span>
+                  <span
+                    className="font-mono text-muted-foreground/60"
+                    data-testid={`ambient-volume-${opt.value}`}
+                  >
+                    {Math.round(vol * 100)}%
+                  </span>
+                </div>
                 <div className="relative w-full h-6 flex items-center">
                   <input
                     type="range"
@@ -95,6 +107,7 @@ export function AmbientSounds({ ambientVolumes, onVolumeChange }: AmbientSoundsP
                     max="1"
                     step="0.01"
                     value={vol}
+                    aria-label={`${opt.label} intensity`}
                     onChange={(e) => onVolumeChange(opt.value, parseFloat(e.target.value))}
                     className="w-full absolute inset-0 z-10 opacity-0 cursor-pointer h-full"
                     data-testid={`slider-ambient-${opt.value}`}

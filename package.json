@@ -8,6 +8,7 @@
     "build": "tsx script/build.ts",
     "start": "node script/start-production.cjs",
     "check": "tsc",
+    "verify:audio": "node scripts/verify-audio-wiring.mjs",
     "db:push": "drizzle-kit push"
   },
   "dependencies": {

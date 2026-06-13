@@ -56,6 +56,12 @@ npm run start
 
 The app generates its ambience procedurally with Web Audio instead of bundled audio files. See `docs/audio-soundscape-review.md` for the current sound coverage review and recommended next additions.
 
+Audio wiring verification:
+
+```bash
+npm run verify:audio
+```
+
 ## Codex Mobile Access
 
 Codex mobile works by remote-controlling a running Codex App host. To edit this app from the phone:
