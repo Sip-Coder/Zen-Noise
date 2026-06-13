@@ -257,6 +257,9 @@ if (!ambientComponentText.includes("data-testid={`ambient-volume-${opt.value}`}"
   "decodeAudioData",
   "ctx.createBufferSource()",
   "source.loop = true",
+  "SAMPLE_PLAYBACK_RATES",
+  "purring: 0.5",
+  "source.playbackRate.value = getSamplePlaybackRate(sound)",
   "setAmbientVolume",
   "node.gain.gain.setTargetAtTime",
   "createBrownNoiseBuffer",
@@ -333,6 +336,9 @@ const report = {
   })),
   brownNoiseVerified: sampleSources.brown === expectedSampleSources.brown &&
     fs.existsSync(publicPathToFile(expectedSampleSources.brown)),
+  purrPlaybackRateVerified: engineText.includes("SAMPLE_PLAYBACK_RATES") &&
+    engineText.includes("purring: 0.5") &&
+    engineText.includes("source.playbackRate.value = getSamplePlaybackRate(sound)"),
   sliderControlsVerified: ambientComponentText.includes("slider-ambient-${opt.value}") &&
     ambientComponentText.includes("ambient-volume-${opt.value}") &&
     engineText.includes("setAmbientVolume") &&

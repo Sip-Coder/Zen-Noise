@@ -25,6 +25,10 @@ const SAMPLE_SOURCES: Record<AmbientSound | "brown", string> = {
   forest: "/audio/forest-leaves.mp3",
 };
 
+const SAMPLE_PLAYBACK_RATES: Partial<Record<AmbientSound | "brown", number>> = {
+  purring: 0.5,
+};
+
 interface AudioEngineState {
   isPlaying: boolean;
   volume: number;
@@ -56,6 +60,11 @@ interface ModulationProfile {
 function clampVolume(value: number): number {
   if (!Number.isFinite(value)) return 0;
   return Math.max(0, Math.min(1, value));
+}
+
+function getSamplePlaybackRate(sound: SampleSound): number {
+  const rate = SAMPLE_PLAYBACK_RATES[sound] ?? 1;
+  return Number.isFinite(rate) && rate > 0 ? rate : 1;
 }
 
 function getModulationProfile(intensity: WaveIntensity): ModulationProfile {
@@ -236,6 +245,7 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
         const source = ctx.createBufferSource();
         source.buffer = buffer;
         source.loop = true;
+        source.playbackRate.value = getSamplePlaybackRate(sound);
         source.connect(node.gain);
         source.start();
         node.source = source;

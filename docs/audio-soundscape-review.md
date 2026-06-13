@@ -18,7 +18,7 @@ The current pass improves authenticity and compatibility by replacing most OGG a
 | Chirping birds | `/audio/birds.mp3` | Covered. Real morning birds recording, separate from wind. |
 | Crackling camp fire | `/audio/campfire.mp3` | Covered. Quiet nighttime campfire recording. |
 | Tibetan bowl ringing | `/audio/tibetan-bowl.mp3` | Covered. Real Tibetan singing bowl recording, now CC0. |
-| Sleeping cat purr | `/audio/cat-purr.mp3` | Covered. Real cat purr recording. |
+| Sleeping cat purr | `/audio/cat-purr.mp3` at 0.5x playback | Covered. Real cat purr recording slowed to half pace after envelope analysis found the original pulse around 428.6 BPM. |
 | Forest rustling leaves | `/audio/forest-leaves.mp3` | Covered. Gentler breeze-through-pines recording, replacing the more aggressive rustling-leaves WAV. |
 
 ## Deep Audio Research Findings
@@ -29,6 +29,7 @@ The current pass improves authenticity and compatibility by replacing most OGG a
 - MP3 is now used for every ambience layer. This is more compatible than relying on OGG ambience files and keeps the forest layer lighter than the prior WAV.
 - Brown noise is a noise color rather than a field recording target. A generated fallback is acceptable because it preserves the expected acoustic profile when the browser cannot decode the bundled OGG.
 - The prior forest leaves file felt too intense as a sleep layer, so it was replaced with a softer CC0 breeze-through-pines recording.
+- The cat purr file decoded to a 12.64 second stereo MP3. Its dominant RMS-envelope pulse measured around 428.6 BPM, so Zen Noise plays the purr source at 0.5x speed, reducing the perceived pulse to about 214.3 BPM and extending the loop to about 25.28 seconds.
 
 ## Product Audio Changes Made In This Pass
 
@@ -36,6 +37,7 @@ The current pass improves authenticity and compatibility by replacing most OGG a
 - Added a generated brown-noise fallback buffer for browsers that cannot decode the brown-noise OGG file.
 - Moved brown noise out of curated mixes and share links.
 - Replaced the forest leaves WAV with a subtler MP3 breeze-through-pines recording.
+- Slowed the cat purr layer to half speed with a purring-only Web Audio playback-rate override.
 - Replaced higher-friction CC BY and CC BY-SA assets with CC0 Freesound recordings where available.
 - Added six curated mixes in `client/src/lib/mix-presets.ts`.
 - Added shuffle and share-link controls in `client/src/components/MixPresets.tsx`.
@@ -56,6 +58,7 @@ The analyzer verifies:
 - Every requested ambient sound appears in the `AmbientSound` union, `ALL_AMBIENTS`, engine defaults, saved-volume defaults, and UI options.
 - Every requested sound maps to an existing local audio file in `SAMPLE_SOURCES`.
 - Every ambient tile has a button, slider test ID, visible intensity readout, and per-sound gain wiring.
+- The purr layer has a dedicated 0.5x playback-rate override so its pulse pace is cut in half without changing other samples.
 - Brown noise has a local audio file, Web Audio gain control, generated fallback evidence, and an independent opt-in button.
 - Layer modulation has a global UI control and a Web Audio scheduler that rotates focus across all active recorded samples.
 - Mix presets, shuffle, and share-link UI are wired.
@@ -106,7 +109,8 @@ Before shipping major audio changes:
 6. Apply each curated mix and confirm the visible sliders update.
 7. Use the share button, reopen the copied link, and confirm the same ambient mix loads without forcing brown noise on.
 8. Move each ambient slider down and back up; confirm the visible percentage and perceived layer intensity both change.
-9. Turn on Brown Noise separately, then test layered playback with brown noise at 25-40 percent and two ambiences at 20-35 percent.
-10. Set modulation to Gentle or Deep with at least three active layers and confirm each layer briefly comes forward without permanently changing its slider value.
-11. Listen for clicks, obvious loops, harsh high-frequency events, and startling peaks.
-12. Confirm the timer fade still suspends playback cleanly.
+9. Test Purr at 50 percent and confirm the layer feels roughly half as fast as the original purr source.
+10. Turn on Brown Noise separately, then test layered playback with brown noise at 25-40 percent and two ambiences at 20-35 percent.
+11. Set modulation to Gentle or Deep with at least three active layers and confirm each layer briefly comes forward without permanently changing its slider value.
+12. Listen for clicks, obvious loops, harsh high-frequency events, and startling peaks.
+13. Confirm the timer fade still suspends playback cleanly.
