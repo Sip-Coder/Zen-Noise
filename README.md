@@ -19,6 +19,18 @@ npm run dev
 
 The app defaults to port `5000`.
 
+## Click To Open Locally
+
+From the repository folder, double-click `Start-Local-Site.cmd`.
+
+That launcher starts the Vite-backed local server, waits for it to respond, and opens:
+
+```text
+http://127.0.0.1:5000
+```
+
+If the server is already running, you can also double-click `Open-Zen-Noise-Localhost.url`.
+
 On Windows, if port `5000` is already in use:
 
 ```powershell
@@ -39,6 +51,10 @@ Production smoke test:
 npm run build
 npm run start
 ```
+
+## Audio Review
+
+The app generates its ambience procedurally with Web Audio instead of bundled audio files. See `docs/audio-soundscape-review.md` for the current sound coverage review and recommended next additions.
 
 ## Codex Mobile Access
 

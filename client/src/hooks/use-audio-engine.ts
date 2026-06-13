@@ -12,6 +12,8 @@ const DEFAULT_VOLUMES: AmbientVolumes = {
   campfire: 0, ring: 0, purring: 0, forest: 0,
 };
 
+const LOOP_CROSSFADE_SECONDS = 0.12;
+
 interface AudioEngineState {
   isPlaying: boolean;
   volume: number;
@@ -46,8 +48,6 @@ function createBrownNoiseBuffer(ctx: AudioContext, seconds: number): AudioBuffer
       const white = Math.random() * 2 - 1;
       lastOut = (lastOut + 0.02 * white) / 1.02;
       data[i] = lastOut * 3.5;
-      if (data[i] > 1) data[i] = 1;
-      if (data[i] < -1) data[i] = -1;
     }
   }
   return buffer;
@@ -71,6 +71,52 @@ function createPinkNoiseBuffer(ctx: AudioContext, seconds: number): AudioBuffer 
       b6 = white * 0.115926;
     }
   }
+  return buffer;
+}
+
+function normalizeBuffer(buffer: AudioBuffer, targetPeak: number = 0.92): AudioBuffer {
+  let peak = 0;
+
+  for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+    const data = buffer.getChannelData(ch);
+    for (let i = 0; i < data.length; i++) {
+      peak = Math.max(peak, Math.abs(data[i]));
+    }
+  }
+
+  if (peak <= targetPeak || peak === 0) return buffer;
+
+  const scale = targetPeak / peak;
+  for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+    const data = buffer.getChannelData(ch);
+    for (let i = 0; i < data.length; i++) {
+      data[i] *= scale;
+    }
+  }
+
+  return buffer;
+}
+
+function makeLoopSeamless(buffer: AudioBuffer, crossfadeSeconds: number = LOOP_CROSSFADE_SECONDS): AudioBuffer {
+  const fadeFrames = Math.min(
+    Math.floor(buffer.sampleRate * crossfadeSeconds),
+    Math.floor(buffer.length / 4),
+  );
+
+  if (fadeFrames < 2) return buffer;
+
+  for (let ch = 0; ch < buffer.numberOfChannels; ch++) {
+    const data = buffer.getChannelData(ch);
+    const startSamples = data.slice(0, fadeFrames);
+    const endStart = buffer.length - fadeFrames;
+
+    for (let i = 0; i < fadeFrames; i++) {
+      const t = i / (fadeFrames - 1);
+      const wrappedSample = startSamples[(i + 1) % fadeFrames];
+      data[endStart + i] = data[endStart + i] * (1 - t) + wrappedSample * t;
+    }
+  }
+
   return buffer;
 }
 
@@ -183,9 +229,9 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
     const ctx = new Ctx();
     audioContextRef.current = ctx;
 
-    const brownBuffer = createBrownNoiseBuffer(ctx, 5);
-    const whiteBuffer = createWhiteNoiseBuffer(ctx, 4);
-    const pinkBuffer = createPinkNoiseBuffer(ctx, 4);
+    const brownBuffer = makeLoopSeamless(normalizeBuffer(createBrownNoiseBuffer(ctx, 16)));
+    const whiteBuffer = makeLoopSeamless(normalizeBuffer(createWhiteNoiseBuffer(ctx, 12), 0.94));
+    const pinkBuffer = makeLoopSeamless(normalizeBuffer(createPinkNoiseBuffer(ctx, 12)));
 
     const noiseSource = ctx.createBufferSource();
     noiseSource.buffer = brownBuffer;
@@ -627,7 +673,7 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
       const now = ctx.currentTime;
       const rand = Math.random();
 
-      if (rand > 0.68) {
+      if (rand > 0.84) {
         const pan = randomBetween(-0.7, 0.7);
         const clinkFreq = randomBetween(2600, 6200);
         const partials = [1, randomBetween(1.18, 1.38), randomBetween(1.9, 2.25)];
@@ -640,7 +686,7 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
           osc.frequency.setValueAtTime(freq, start);
           osc.frequency.exponentialRampToValueAtTime(freq * randomBetween(0.62, 0.82), start + randomBetween(0.08, 0.18));
           g.gain.setValueAtTime(0.0001, start);
-          g.gain.linearRampToValueAtTime((0.014 + Math.random() * 0.018) / (idx + 1), start + 0.004);
+          g.gain.linearRampToValueAtTime((0.008 + Math.random() * 0.014) / (idx + 1), start + 0.004);
           g.gain.exponentialRampToValueAtTime(0.0001, start + randomBetween(0.14, 0.32));
           osc.connect(g);
           connectWithPan(ctx, g, mixGain, pan + randomBetween(-0.08, 0.08));
@@ -650,7 +696,7 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
         scheduleNoiseBurst(ctx, mixGain, {
           startTime: now,
           duration: 0.035,
-          peak: 0.018,
+          peak: 0.012,
           attack: 0.002,
           noise: "white",
           filters: [
@@ -713,7 +759,7 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
         });
       }
 
-      const id = window.setTimeout(scheduleCoffeeEvent, randomBetween(550, 3200));
+      const id = window.setTimeout(scheduleCoffeeEvent, randomBetween(900, 4200));
       const ids = ambientIntervalsRef.current.get("coffee") || [];
       ids.push(id);
       ambientIntervalsRef.current.set("coffee", ids);
@@ -801,9 +847,9 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
       if (ctx.state !== "running") return;
       const now = ctx.currentTime;
 
-      const isClose = Math.random() > 0.72;
-      const intensity = isClose ? randomBetween(0.48, 0.75) : randomBetween(0.12, 0.32);
-      const attack = isClose ? randomBetween(0.025, 0.09) : randomBetween(0.16, 0.45);
+      const isClose = Math.random() > 0.88;
+      const intensity = isClose ? randomBetween(0.34, 0.56) : randomBetween(0.1, 0.24);
+      const attack = isClose ? randomBetween(0.06, 0.14) : randomBetween(0.22, 0.55);
       const decay = isClose ? randomBetween(4.5, 8) : randomBetween(2.2, 5.2);
       const pan = randomBetween(-0.35, 0.35);
 
@@ -844,8 +890,8 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
         scheduleNoiseBurst(ctx, mixGain, {
           startTime: now + randomBetween(0, 0.08),
           duration: randomBetween(0.07, 0.16),
-          peak: randomBetween(0.055, 0.11),
-          attack: 0.004,
+          peak: randomBetween(0.025, 0.055),
+          attack: 0.01,
           noise: "white",
           filters: [
             { type: "highpass", frequency: randomBetween(900, 1600) },
@@ -865,13 +911,13 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
         mixGain.gain.exponentialRampToValueAtTime(0.03, now + attack + decay);
       }
 
-      const nextDelay = randomBetween(9000, 28000);
+      const nextDelay = randomBetween(14000, 36000);
       const id = window.setTimeout(scheduleStrike, nextDelay);
       const ids = ambientIntervalsRef.current.get("thunder") || [];
       ids.push(id);
       ambientIntervalsRef.current.set("thunder", ids);
     };
-    const initialId = window.setTimeout(scheduleStrike, 1000 + Math.random() * 4000);
+    const initialId = window.setTimeout(scheduleStrike, 4000 + Math.random() * 6000);
     ambientIntervalsRef.current.set("thunder", [initialId]);
 
     return () => {
@@ -892,14 +938,14 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
       const now = ctx.currentTime;
 
       const rand = Math.random();
-      if (rand > 0.32) {
+      if (rand > 0.42) {
         const clusterCount = Math.random() > 0.78 ? 2 + Math.floor(Math.random() * 4) : 1;
         for (let i = 0; i < clusterCount; i++) {
           const isLoud = Math.random() > 0.72;
           scheduleNoiseBurst(ctx, mixGain, {
             startTime: now + i * randomBetween(0.018, 0.055),
             duration: isLoud ? randomBetween(0.045, 0.11) : randomBetween(0.018, 0.05),
-            peak: isLoud ? randomBetween(0.085, 0.18) : randomBetween(0.025, 0.075),
+            peak: isLoud ? randomBetween(0.055, 0.13) : randomBetween(0.018, 0.052),
             attack: randomBetween(0.0015, 0.005),
             noise: "white",
             filters: [
@@ -911,7 +957,7 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
         }
       }
 
-      if (Math.random() > 0.9) {
+      if (Math.random() > 0.94) {
         const popStart = now + randomBetween(0.03, 0.18);
         scheduleNoiseBurst(ctx, mixGain, {
           startTime: popStart,
@@ -939,7 +985,7 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
         });
       }
 
-      const id = window.setTimeout(scheduleCrackle, randomBetween(70, 430));
+      const id = window.setTimeout(scheduleCrackle, randomBetween(110, 620));
       const ids = ambientIntervalsRef.current.get("campfire") || [];
       ids.push(id);
       ambientIntervalsRef.current.set("campfire", ids);
@@ -985,8 +1031,8 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
         osc.frequency.exponentialRampToValueAtTime(midFreq, chirpStart + chirpDur * randomBetween(0.25, 0.45));
         osc.frequency.exponentialRampToValueAtTime(endFreq, chirpStart + chirpDur);
         g.gain.setValueAtTime(0.0001, chirpStart);
-        g.gain.linearRampToValueAtTime(randomBetween(0.026, 0.055), chirpStart + chirpDur * 0.18);
-        g.gain.setValueAtTime(randomBetween(0.018, 0.04), chirpStart + chirpDur * 0.68);
+        g.gain.linearRampToValueAtTime(randomBetween(0.014, 0.036), chirpStart + chirpDur * 0.18);
+        g.gain.setValueAtTime(randomBetween(0.009, 0.025), chirpStart + chirpDur * 0.68);
         g.gain.linearRampToValueAtTime(0, chirpStart + chirpDur);
         osc.connect(g);
         connectWithPan(ctx, g, mixGain, pan + randomBetween(-0.12, 0.12));
@@ -1000,7 +1046,7 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
           overtone.frequency.setValueAtTime(freq * randomBetween(1.48, 1.72), chirpStart);
           overtone.frequency.exponentialRampToValueAtTime(endFreq * randomBetween(1.45, 1.65), chirpStart + chirpDur);
           overtoneGain.gain.setValueAtTime(0.0001, chirpStart);
-          overtoneGain.gain.linearRampToValueAtTime(randomBetween(0.006, 0.014), chirpStart + chirpDur * 0.2);
+          overtoneGain.gain.linearRampToValueAtTime(randomBetween(0.003, 0.009), chirpStart + chirpDur * 0.2);
           overtoneGain.gain.exponentialRampToValueAtTime(0.0001, chirpStart + chirpDur);
           overtone.connect(overtoneGain);
           connectWithPan(ctx, overtoneGain, mixGain, pan + randomBetween(-0.12, 0.12));
@@ -1022,7 +1068,7 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
         });
       }
 
-      if (Math.random() > 0.6) {
+      if (Math.random() > 0.78) {
         const trillStart = now + numChirps * 0.2 + Math.random() * 0.3;
         const trillDur = 0.3 + Math.random() * 0.4;
         const trillFreq = 3000 + Math.random() * 2000;
@@ -1037,8 +1083,8 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
         osc2.type = "sine";
         osc2.frequency.setValueAtTime(trillFreq, trillStart);
         g2.gain.setValueAtTime(0, trillStart);
-        g2.gain.linearRampToValueAtTime(0.025, trillStart + 0.05);
-        g2.gain.setValueAtTime(0.02, trillStart + trillDur * 0.8);
+        g2.gain.linearRampToValueAtTime(0.014, trillStart + 0.05);
+        g2.gain.setValueAtTime(0.011, trillStart + trillDur * 0.8);
         g2.gain.linearRampToValueAtTime(0, trillStart + trillDur);
         osc2.connect(g2);
         connectWithPan(ctx, g2, mixGain, pan + randomBetween(-0.2, 0.2));
@@ -1048,7 +1094,7 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
         lfo.stop(trillStart + trillDur + 0.01);
       }
 
-      const nextDelay = randomBetween(1600, 6200);
+      const nextDelay = randomBetween(3200, 9500);
       const id = window.setTimeout(scheduleChirpGroup, nextDelay);
       const ids = ambientIntervalsRef.current.get("birds") || [];
       ids.push(id);
@@ -1098,7 +1144,7 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
         const harmonicFreq = bowlFreq * h * randomBetween(0.998, 1.002);
         osc.frequency.setValueAtTime(harmonicFreq, now);
         osc.frequency.linearRampToValueAtTime(harmonicFreq * (1 + Math.random() * 0.004), now + bowlDur);
-        const vol = 0.05 / (idx + 1);
+        const vol = 0.042 / (idx + 1);
         g.gain.setValueAtTime(0, now);
         g.gain.linearRampToValueAtTime(vol, now + randomBetween(0.12, 0.28));
         g.gain.exponentialRampToValueAtTime(vol * 0.3, now + bowlDur * 0.5);
@@ -1134,7 +1180,7 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
           osc.type = "sine";
           osc.frequency.setValueAtTime(droneFreq * h, droneStart);
           osc.frequency.linearRampToValueAtTime(droneFreq * h * (1 + Math.random() * 0.01), droneStart + droneDur);
-          const vol = 0.022 / (idx + 1);
+          const vol = 0.016 / (idx + 1);
           g.gain.setValueAtTime(0, droneStart);
           g.gain.linearRampToValueAtTime(vol, droneStart + droneDur * 0.25);
           g.gain.linearRampToValueAtTime(vol * 0.8, droneStart + droneDur * 0.7);
@@ -1146,7 +1192,7 @@ export function useAudioEngine(initialVolume: number = 0.5, initialAmbientVolume
         });
       }
 
-      const nextDelay = randomBetween(9000, 15000);
+      const nextDelay = randomBetween(14000, 24000);
       const id = window.setTimeout(scheduleBowlStrike, nextDelay);
       const ids = ambientIntervalsRef.current.get("ring") || [];
       ids.push(id);

@@ -14,8 +14,8 @@ const AMBIENT_OPTIONS: { value: AmbientSound; label: string; icon: typeof CloudR
   { value: "wind", label: "Wind", icon: Wind, color: "from-teal-500/20 to-teal-600/5" },
   { value: "birds", label: "Birds", icon: Bird, color: "from-green-500/20 to-green-600/5" },
   { value: "campfire", label: "Fire", icon: Flame, color: "from-orange-500/20 to-orange-600/5" },
-  { value: "ring", label: "Ring", icon: Bell, color: "from-indigo-500/20 to-indigo-600/5" },
-  { value: "purring", label: "Cats", icon: Cat, color: "from-pink-500/20 to-pink-600/5" },
+  { value: "ring", label: "Bowl", icon: Bell, color: "from-indigo-500/20 to-indigo-600/5" },
+  { value: "purring", label: "Purr", icon: Cat, color: "from-pink-500/20 to-pink-600/5" },
   { value: "forest", label: "Forest", icon: TreePine, color: "from-emerald-500/20 to-emerald-600/5" },
 ];
 
