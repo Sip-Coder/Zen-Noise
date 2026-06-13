@@ -1,6 +1,5 @@
-const CACHE_NAME = 'brown-noise-v2';
+const CACHE_NAME = 'zen-noise-v4';
 const ASSETS = [
-  '/',
   '/index.html',
   '/manifest.json',
   '/favicon.png'
@@ -19,14 +18,31 @@ self.addEventListener('activate', (e) => {
       return Promise.all(
         keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
       );
-    })
+    }).then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', (e) => {
+  if (e.request.method !== 'GET') return;
+
+  if (e.request.mode === 'navigate') {
+    e.respondWith(fetch(e.request).catch(() => caches.match('/index.html')));
+    return;
+  }
+
   e.respondWith(
-    caches.match(e.request).then((response) => {
-      return response || fetch(e.request);
+    caches.match(e.request).then((cached) => {
+      const fresh = fetch(e.request)
+        .then((response) => {
+          if (response.ok && e.request.url.startsWith(self.location.origin)) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(e.request, copy));
+          }
+          return response;
+        })
+        .catch(() => cached);
+
+      return cached || fresh;
     })
   );
 });
