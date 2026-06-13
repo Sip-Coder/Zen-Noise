@@ -7,6 +7,7 @@ import { WaveControl } from "@/components/WaveControl";
 import { AmbientSounds } from "@/components/AmbientSounds";
 import { InstallPrompt } from "@/components/InstallPrompt";
 import { MixPresets } from "@/components/MixPresets";
+import { SavedMixes } from "@/components/SavedMixes";
 import {
   DEFAULT_AMBIENT_VOLUMES,
   MIX_PRESETS,
@@ -16,6 +17,13 @@ import {
   normalizeAmbientVolumes,
   type MixPreset,
 } from "@/lib/mix-presets";
+import {
+  createSavedMix,
+  loadSavedMixes,
+  persistSavedMixes,
+  sanitizeSavedMixName,
+  type SavedMix,
+} from "@/lib/saved-mixes";
 import { Play, Pause, Moon, Info, Waves } from "lucide-react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -71,6 +79,8 @@ export default function Home() {
   const [brownNoiseEnabled, setBrownNoiseEnabled] = useState(loadSavedBrownEnabled);
   const [brownNoiseLevel, setBrownNoiseLevel] = useState(savedBrownVolume);
   const [mixShareState, setMixShareState] = useState<"idle" | "copied" | "linked">("idle");
+  const [savedMixes, setSavedMixes] = useState<SavedMix[]>(loadSavedMixes);
+  const [savedMixState, setSavedMixState] = useState<"idle" | "saved" | "updated" | "empty">("idle");
 
   const {
     isPlaying,
@@ -143,6 +153,55 @@ export default function Home() {
     const choices = MIX_PRESETS.filter((preset) => preset.id !== activeMixId);
     const nextPreset = choices[Math.floor(Math.random() * choices.length)] || MIX_PRESETS[0];
     applyMix(nextPreset);
+  };
+
+  const updateSavedMixStatus = (state: "idle" | "saved" | "updated" | "empty") => {
+    setSavedMixState(state);
+    if (state !== "idle") {
+      window.setTimeout(() => setSavedMixState("idle"), 1800);
+    }
+  };
+
+  const saveCurrentMix = (name: string): boolean => {
+    const sanitizedName = sanitizeSavedMixName(name);
+    if (!sanitizedName) {
+      updateSavedMixStatus("empty");
+      return false;
+    }
+
+    const existingMix = savedMixes.find((mix) => mix.name.toLowerCase() === sanitizedName.toLowerCase());
+    const savedMix = createSavedMix(sanitizedName, {
+      ambientVolumes,
+      brownNoiseEnabled,
+      brownNoiseLevel,
+      waveIntensity,
+    }, existingMix);
+    const nextMixes = [
+      savedMix,
+      ...savedMixes.filter((mix) => mix.id !== savedMix.id),
+    ].sort((a, b) => b.updatedAt - a.updatedAt);
+
+    setSavedMixes(nextMixes);
+    persistSavedMixes(nextMixes);
+    updateSavedMixStatus(existingMix ? "updated" : "saved");
+    return true;
+  };
+
+  const applySavedMix = (mix: SavedMix) => {
+    ALL_AMBIENTS.forEach((sound) => setAmbientVolume(sound, mix.ambientVolumes[sound]));
+
+    const nextBrownLevel = mix.brownNoiseLevel > 0 ? mix.brownNoiseLevel : 0.35;
+    setBrownNoiseLevel(nextBrownLevel);
+    setBrownNoiseEnabled(mix.brownNoiseEnabled);
+    setVolume(mix.brownNoiseEnabled ? nextBrownLevel : 0);
+    setWaveIntensity(mix.waveIntensity);
+  };
+
+  const deleteSavedMix = (id: string) => {
+    const nextMixes = savedMixes.filter((mix) => mix.id !== id);
+    setSavedMixes(nextMixes);
+    persistSavedMixes(nextMixes);
+    updateSavedMixStatus("idle");
   };
 
   const copyCurrentMixLink = async () => {
@@ -272,6 +331,14 @@ export default function Home() {
           onApply={applyMix}
           onShuffle={shuffleMix}
           onCopyLink={copyCurrentMixLink}
+        />
+
+        <SavedMixes
+          savedMixes={savedMixes}
+          saveState={savedMixState}
+          onSave={saveCurrentMix}
+          onApply={applySavedMix}
+          onDelete={deleteSavedMix}
         />
 
         <div className="w-full">

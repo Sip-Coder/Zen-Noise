@@ -43,6 +43,7 @@ The gaps versus Noisli were:
 - Added six curated mixes: Focus, Sleep, Storm, Forest, Hearth, and Reset.
 - Added a shuffle control that jumps between curated mixes.
 - Added shareable mix links using URL parameters for active ambience volumes.
+- Added named local saved mixes with restore and delete controls.
 - Split brown noise into a standalone opt-in layer so curated mixes do not force the heavy low-frequency bed.
 - Replaced most ambience files with researched CC0 MP3 recordings.
 - Added MP3 assets for rain, coffee shop, thunderstorm, wind, birds, campfire, Tibetan bowl, purr, and forest leaves.
@@ -54,7 +55,7 @@ The gaps versus Noisli were:
 
 | Gap | Recommendation |
 | --- | --- |
-| Favorites | Add a named local favorites drawer with rename, delete, reorder, and share controls. |
+| Favorites polish | Add rename, reorder, and per-saved-mix share controls. |
 | Automatic shuffle | Let users cycle through saved mixes every 15/30/60 minutes with a crossfade. |
 | Oscillation depth | Add per-sound opt-outs, custom depth, and custom tempo for users who want finer modulation control. |
 | Timer sessions | Add Focus/Break loops, long breaks, tab title countdown, and optional notification. |
@@ -65,4 +66,4 @@ The gaps versus Noisli were:
 
 ## Product Direction
 
-Zen Noise should not try to become a full Noisli clone. Its stronger lane is a no-account, sleep-friendly, source-documented mixer that opens quickly and keeps controls calm. The best next competitive move is a local favorites drawer plus automatic mix crossfades, because that closes the Noisli Combo/Playlist gap without adding accounts or clutter.
+Zen Noise should not try to become a full Noisli clone. Its stronger lane is a no-account, sleep-friendly, source-documented mixer that opens quickly and keeps controls calm. The best next competitive move is automatic mix crossfades plus saved-mix polish, because named local saved mixes now close the core Noisli Combo/Favorites gap without adding accounts or clutter.

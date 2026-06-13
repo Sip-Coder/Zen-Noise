@@ -165,8 +165,10 @@ function publicPathToFile(publicPath) {
 const engineText = read("client/src/hooks/use-audio-engine.ts");
 const homeText = read("client/src/pages/Home.tsx");
 const ambientComponentText = read("client/src/components/AmbientSounds.tsx");
+const savedMixesComponentText = read("client/src/components/SavedMixes.tsx");
 const reviewText = read("docs/audio-soundscape-review.md");
 const sampleSourceText = read("docs/audio-sample-sources.md");
+const savedMixesText = read("client/src/lib/saved-mixes.ts");
 const mixPresetsText = read("client/src/lib/mix-presets.ts");
 const mixPresetsComponentText = read("client/src/components/MixPresets.tsx");
 const sourceManifest = JSON.parse(read("client/public/audio/audio-sources.json"));
@@ -293,6 +295,18 @@ if (!ambientComponentText.includes("data-testid={`ambient-volume-${opt.value}`}"
   if (!mixPresetsText.includes(needle)) failures.push(`Mix preset wiring is missing source evidence: ${needle}.`);
 });
 
+[
+  "SAVED_MIXES_STORAGE_KEY",
+  "loadSavedMixes",
+  "persistSavedMixes",
+  "createSavedMix",
+  "sanitizeSavedMixName",
+  "brownNoiseEnabled",
+  "waveIntensity",
+].forEach((needle) => {
+  if (!savedMixesText.includes(needle)) failures.push(`Saved mix storage is missing source evidence: ${needle}.`);
+});
+
 if (mixPresetsText.includes("brownVolume") || mixPresetsText.includes("waveIntensity")) {
   failures.push("Mix presets should not control brown noise volume or brown-noise wave intensity.");
 }
@@ -303,6 +317,16 @@ if (mixPresetsText.includes("brownVolume") || mixPresetsText.includes("waveInten
   "btn-mix-${preset.id}",
 ].forEach((needle) => {
   if (!mixPresetsComponentText.includes(needle)) failures.push(`Mix preset UI is missing source evidence: ${needle}.`);
+});
+
+[
+  "saved-mixes-panel",
+  "input-saved-mix-name",
+  "btn-save-current-mix",
+  "btn-apply-saved-mix-${mix.id}",
+  "btn-delete-saved-mix-${mix.id}",
+].forEach((needle) => {
+  if (!savedMixesComponentText.includes(needle)) failures.push(`Saved mix UI is missing source evidence: ${needle}.`);
 });
 
 docCoverageTerms.forEach((term) => {
@@ -348,6 +372,13 @@ const report = {
     homeText.includes("copyCurrentMixLink") &&
     !mixPresetsText.includes("brownVolume") &&
     !mixPresetsText.includes("waveIntensity"),
+  savedMixesVerified: savedMixesText.includes("SAVED_MIXES_STORAGE_KEY") &&
+    savedMixesText.includes("createSavedMix") &&
+    savedMixesComponentText.includes("saved-mixes-panel") &&
+    savedMixesComponentText.includes("input-saved-mix-name") &&
+    homeText.includes("saveCurrentMix") &&
+    homeText.includes("applySavedMix") &&
+    homeText.includes("deleteSavedMix"),
   brownNoiseStandaloneVerified: homeText.includes("btn-brown-noise") &&
     homeText.includes("brown_noise_enabled") &&
     engineText.includes("if (volumeRef.current > 0)") &&
