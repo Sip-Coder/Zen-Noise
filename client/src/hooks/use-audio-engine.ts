@@ -1,15 +1,54 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export type WaveIntensity = "steady" | "gentle" | "deep";
-export type AmbientSound = "rain" | "coffee" | "thunder" | "wind" | "birds" | "campfire" | "ring" | "purring" | "forest";
+export type AmbientSound =
+  | "rain"
+  | "coffee"
+  | "thunder"
+  | "wind"
+  | "birds"
+  | "campfire"
+  | "ring"
+  | "purring"
+  | "forest"
+  | "ocean"
+  | "stream"
+  | "waterfall"
+  | "crickets"
+  | "fan"
+  | "city"
+  | "train"
+  | "airplane"
+  | "washer";
 
-export const ALL_AMBIENTS: AmbientSound[] = ["rain", "coffee", "thunder", "wind", "birds", "campfire", "ring", "purring", "forest"];
+export const ALL_AMBIENTS: AmbientSound[] = [
+  "rain",
+  "coffee",
+  "thunder",
+  "wind",
+  "birds",
+  "campfire",
+  "ring",
+  "purring",
+  "forest",
+  "ocean",
+  "stream",
+  "waterfall",
+  "crickets",
+  "fan",
+  "city",
+  "train",
+  "airplane",
+  "washer",
+];
 
 export type AmbientVolumes = Record<AmbientSound, number>;
 
 const DEFAULT_VOLUMES: AmbientVolumes = {
   rain: 0, coffee: 0, thunder: 0, wind: 0, birds: 0,
   campfire: 0, ring: 0, purring: 0, forest: 0,
+  ocean: 0, stream: 0, waterfall: 0, crickets: 0, fan: 0,
+  city: 0, train: 0, airplane: 0, washer: 0,
 };
 
 const SAMPLE_SOURCES: Record<AmbientSound | "brown", string> = {
@@ -23,6 +62,15 @@ const SAMPLE_SOURCES: Record<AmbientSound | "brown", string> = {
   ring: "/audio/tibetan-bowl.mp3",
   purring: "/audio/cat-purr.mp3",
   forest: "/audio/forest-leaves.mp3",
+  ocean: "/audio/ocean-waves.mp3",
+  stream: "/audio/stream-river.mp3",
+  waterfall: "/audio/waterfall-forest.mp3",
+  crickets: "/audio/night-crickets.mp3",
+  fan: "/audio/room-fan.mp3",
+  city: "/audio/city-rumble.mp3",
+  train: "/audio/train-interior.mp3",
+  airplane: "/audio/airplane-cabin.mp3",
+  washer: "/audio/washing-machine.mp3",
 };
 
 const SAMPLE_PLAYBACK_RATES: Partial<Record<AmbientSound | "brown", number>> = {

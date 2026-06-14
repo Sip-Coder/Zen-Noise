@@ -107,5 +107,104 @@
     "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
     "attribution": "keweldog via Freesound, CC0",
     "reviewNote": "Selected to replace the aggressive rustling-leaves WAV with a gentler breeze-through-pines recording."
+  },
+  {
+    "sound": "ocean",
+    "localFile": "/audio/ocean-waves.mp3",
+    "sourceTitle": "soft waves",
+    "sourcePage": "https://freesound.org/people/trezz77/sounds/546679/",
+    "sourceFile": "https://cdn.freesound.org/previews/546/546679_5637404-hq.mp3",
+    "license": "Creative Commons 0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution": "trezz77 via Freesound, CC0",
+    "reviewNote": "Selected as a soft surf bed without gulls, voices, children, or storm-boom metadata."
+  },
+  {
+    "sound": "stream",
+    "localFile": "/audio/stream-river.mp3",
+    "sourceTitle": "Stream River Water Up Close",
+    "sourcePage": "https://freesound.org/people/jackthemurray/sounds/433589/",
+    "sourceFile": "https://cdn.freesound.org/previews/433/433589_5618682-hq.mp3",
+    "license": "Creative Commons 0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution": "jackthemurray via Freesound, CC0",
+    "reviewNote": "Selected for a clean, soft stream recording tagged as babbling brook, creek, field recording, and relaxing water."
+  },
+  {
+    "sound": "waterfall",
+    "localFile": "/audio/waterfall-forest.mp3",
+    "sourceTitle": "Big waterfall in forest.wav",
+    "sourcePage": "https://freesound.org/people/BonnyOrbit/sounds/442475/",
+    "sourceFile": "https://cdn.freesound.org/previews/442/442475_5902878-hq.mp3",
+    "license": "Creative Commons 0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution": "BonnyOrbit via Freesound, CC0",
+    "reviewNote": "Selected as a real Swiss forest waterfall recording with steady water-flow masking; presets keep it lower so it does not dominate sleep mixes."
+  },
+  {
+    "sound": "crickets",
+    "localFile": "/audio/night-crickets.mp3",
+    "sourceTitle": "cricket night ambience lebanon pine forest .wav",
+    "sourcePage": "https://freesound.org/people/Ramston/sounds/580353/",
+    "sourceFile": "https://cdn.freesound.org/previews/580/580353_989468-hq.mp3",
+    "license": "Creative Commons 0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution": "Ramston via Freesound, CC0",
+    "reviewNote": "Selected as a focused cricket-night layer from a pine forest, avoiding broader jungle beds with loud cicadas or animal calls."
+  },
+  {
+    "sound": "fan",
+    "localFile": "/audio/room-fan.mp3",
+    "sourceTitle": "Roomtone Warehouse Fans Vents Large",
+    "sourcePage": "https://freesound.org/people/leonelmail/sounds/427861/",
+    "sourceFile": "https://cdn.freesound.org/previews/427/427861_4437257-hq.mp3",
+    "license": "Creative Commons 0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution": "leonelmail via Freesound, CC0",
+    "reviewNote": "Selected as a real fan and vent room-tone recording for steady mechanical masking without using synthetic white or pink noise."
+  },
+  {
+    "sound": "city",
+    "localFile": "/audio/city-rumble.mp3",
+    "sourceTitle": "180912 Night city rumble quiet distant traffic roof urban residential TORONTO.flac",
+    "sourcePage": "https://freesound.org/people/TRP/sounds/572530/",
+    "sourceFile": "https://cdn.freesound.org/previews/572/572530_97550-hq.mp3",
+    "license": "Creative Commons 0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution": "TRP via Freesound, CC0",
+    "reviewNote": "Selected for quiet distant traffic and city-room rumble metadata, rejecting alternatives with sirens, horns, or foreground speech."
+  },
+  {
+    "sound": "train",
+    "localFile": "/audio/train-interior.mp3",
+    "sourceTitle": "Riding Train interior recording",
+    "sourcePage": "https://freesound.org/people/gecop/sounds/525058/",
+    "sourceFile": "https://cdn.freesound.org/previews/525/525058_3562198-hq.mp3",
+    "license": "Creative Commons 0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution": "gecop via Freesound, CC0",
+    "reviewNote": "Selected as a compact train-interior bed tagged background, railway, riding, and field recording, avoiding announcement-heavy metro files."
+  },
+  {
+    "sound": "airplane",
+    "localFile": "/audio/airplane-cabin.mp3",
+    "sourceTitle": "Airliner, Jet, Interior Ambience, Idle in flight",
+    "sourcePage": "https://freesound.org/people/Kinoton/sounds/438972/",
+    "sourceFile": "https://cdn.freesound.org/previews/438/438972_2247456-hq.mp3",
+    "license": "Creative Commons 0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution": "Kinoton via Freesound, CC0",
+    "reviewNote": "Selected as a five-minute airliner cabin hum with flight, jet, cabin-noise, aircraft, and ambience tags."
+  },
+  {
+    "sound": "washer",
+    "localFile": "/audio/washing-machine.mp3",
+    "sourceTitle": "Washing Machine.WAV",
+    "sourcePage": "https://freesound.org/people/lostphosphene/sounds/416201/",
+    "sourceFile": "https://cdn.freesound.org/previews/416/416201_4587471-hq.mp3",
+    "license": "Creative Commons 0",
+    "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution": "lostphosphene via Freesound, CC0",
+    "reviewNote": "Selected as a real washer cycle with mechanical motor, spin, splash, wash, and water tags, avoiding laundromat clips with radio or talk."
   }
 ]

@@ -1,6 +1,6 @@
 # Noisli Competitive Review
 
-Research date: 2026-06-13.
+Research date: 2026-06-14.
 
 ## Noisli Benchmark
 
@@ -22,6 +22,9 @@ Sources reviewed:
 - <https://support.noisli.com/getting-started-guide/>
 - <https://www.noisli.com/apps>
 - <https://www.noisli.com/blog/the-noisli-android-app-is-here/>
+- <https://www.noisli.com/>
+- <https://www.noisli.com/blog/the-best-sounds-for-sleep-and-relaxation/>
+- <https://support.google.com/googlenest/answer/7364558?hl=en>
 
 ## Zen Noise Before This Pass
 
@@ -47,9 +50,18 @@ The gaps versus Noisli were:
 - Split brown noise into a standalone opt-in layer so curated mixes do not force the heavy low-frequency bed.
 - Replaced most ambience files with researched CC0 MP3 recordings.
 - Added MP3 assets for rain, coffee shop, thunderstorm, wind, birds, campfire, Tibetan bowl, purr, and forest leaves.
+- Added nine more recorded ambient layers from CC0 Freesound sources: Ocean, Stream, Falls, Crickets, Fan, City, Train, Airplane, and Washer.
 - Kept the brown-noise OGG, with a generated brown-noise fallback for decode failures.
 - Extended modulation across all active layers so one sound briefly rises as the current focus while the rest soften, then the focus rotates.
 - Updated audio source documentation, manifest metadata, and audio wiring verification.
+
+## 2026-06-14 Catalog Gap Analysis
+
+Noisli publicly lists rain, ocean, birds, wind, leaves, stream, lake, crickets, bonfire, thunder, waterfall, white, pink, brown, fan, coffee shop, cityscape, train, airplane, and washing machine. Before this pass, Zen Noise already had rain, birds, wind, leaves/forest, campfire, thunder, brown noise, coffee, purr, and bowl. The highest-value missing layers were therefore water variety, night insects, mechanical masking, urban masking, and travel hum.
+
+The app now adds nine of the ten distinct Noisli catalog gaps while intentionally excluding white and pink noise. Lake remains omitted because ocean, stream, and waterfall already give users three water textures with more distinct acoustic profiles.
+
+Google Nest's ambient-sound help page independently validates the same direction: babbling brook, ocean, oscillating fan, river, running water, rain, thunderstorm, water, and white noise are all official ambient-sound categories. Because brown noise is already standalone and the user explicitly did not want pink/white noise as mix defaults, real fan, airplane cabin, city, train, and washer recordings are better replacements than adding more synthetic color noise.
 
 ## Still Worth Building Later
 
@@ -59,7 +71,7 @@ The gaps versus Noisli were:
 | Automatic shuffle | Let users cycle through saved mixes every 15/30/60 minutes with a crossfade. |
 | Oscillation depth | Add per-sound opt-outs, custom depth, and custom tempo for users who want finer modulation control. |
 | Timer sessions | Add Focus/Break loops, long breaks, tab title countdown, and optional notification. |
-| Catalog depth | Add ocean, stream, fan, crickets, snowfall, distant train, city hush, and white/pink noise. |
+| Catalog depth | Consider lower-priority specialty layers such as lake, snowfall, frogs, library hush, or low-volume room tone. The obvious Noisli-style gaps are now mostly covered without adding white/pink noise. |
 | Offline confidence | Pre-cache selected active sounds after first play and expose install/offline readiness in QA. |
 | Background audio | Verify PWA media-session behavior on Android Chrome and iOS Safari. |
 | Text editor | Consider only if Zen Noise should move toward productivity; it may dilute the sleep-first focus. |

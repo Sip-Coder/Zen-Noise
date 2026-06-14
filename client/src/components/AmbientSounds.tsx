@@ -1,5 +1,23 @@
 import { cn } from "@/lib/utils";
-import { CloudRain, Coffee, CloudLightning, Wind, Bird, Flame, Bell, Cat, TreePine } from "lucide-react";
+import {
+  Bell,
+  Bird,
+  Bug,
+  Building2,
+  Cat,
+  CloudLightning,
+  CloudRain,
+  Coffee,
+  Droplets,
+  Fan,
+  Flame,
+  Plane,
+  TrainFront,
+  TreePine,
+  WashingMachine,
+  Waves,
+  Wind,
+} from "lucide-react";
 import type { AmbientSound, AmbientVolumes } from "@/hooks/use-audio-engine";
 
 interface AmbientSoundsProps {
@@ -17,6 +35,15 @@ const AMBIENT_OPTIONS: { value: AmbientSound; label: string; icon: typeof CloudR
   { value: "ring", label: "Bowl", icon: Bell, color: "from-indigo-500/20 to-indigo-600/5" },
   { value: "purring", label: "Purr", icon: Cat, color: "from-pink-500/20 to-pink-600/5" },
   { value: "forest", label: "Forest", icon: TreePine, color: "from-emerald-500/20 to-emerald-600/5" },
+  { value: "ocean", label: "Ocean", icon: Waves, color: "from-cyan-500/20 to-cyan-600/5" },
+  { value: "stream", label: "Stream", icon: Droplets, color: "from-sky-500/20 to-sky-600/5" },
+  { value: "waterfall", label: "Falls", icon: CloudRain, color: "from-blue-400/20 to-blue-500/5" },
+  { value: "crickets", label: "Crickets", icon: Bug, color: "from-lime-500/20 to-lime-600/5" },
+  { value: "fan", label: "Fan", icon: Fan, color: "from-slate-400/20 to-slate-500/5" },
+  { value: "city", label: "City", icon: Building2, color: "from-zinc-400/20 to-zinc-500/5" },
+  { value: "train", label: "Train", icon: TrainFront, color: "from-rose-500/20 to-rose-600/5" },
+  { value: "airplane", label: "Airplane", icon: Plane, color: "from-fuchsia-500/20 to-fuchsia-600/5" },
+  { value: "washer", label: "Washer", icon: WashingMachine, color: "from-stone-400/20 to-stone-500/5" },
 ];
 
 const ACTIVE_COLORS: Record<AmbientSound, string> = {
@@ -29,6 +56,15 @@ const ACTIVE_COLORS: Record<AmbientSound, string> = {
   ring: "text-indigo-400",
   purring: "text-pink-400",
   forest: "text-emerald-400",
+  ocean: "text-cyan-400",
+  stream: "text-sky-400",
+  waterfall: "text-blue-300",
+  crickets: "text-lime-400",
+  fan: "text-slate-300",
+  city: "text-zinc-300",
+  train: "text-rose-400",
+  airplane: "text-fuchsia-400",
+  washer: "text-stone-300",
 };
 
 const ACTIVE_BG: Record<AmbientSound, string> = {
@@ -41,6 +77,15 @@ const ACTIVE_BG: Record<AmbientSound, string> = {
   ring: "bg-indigo-500",
   purring: "bg-pink-500",
   forest: "bg-emerald-500",
+  ocean: "bg-cyan-500",
+  stream: "bg-sky-500",
+  waterfall: "bg-blue-400",
+  crickets: "bg-lime-500",
+  fan: "bg-slate-400",
+  city: "bg-zinc-400",
+  train: "bg-rose-500",
+  airplane: "bg-fuchsia-500",
+  washer: "bg-stone-400",
 };
 
 export function AmbientSounds({ ambientVolumes, onVolumeChange }: AmbientSoundsProps) {

@@ -231,7 +231,7 @@ export default function Home() {
         <div className="absolute bottom-[-10%] left-[-10%] w-[400px] h-[400px] bg-accent/5 rounded-full blur-[100px]" />
       </div>
 
-      <header className="w-full max-w-lg flex justify-between items-center pt-2 pb-6 z-20">
+      <header className="w-full max-w-sm flex justify-between items-center pt-2 pb-6 z-20">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 bg-foreground/10 rounded-full flex items-center justify-center">
             <Moon className="w-4 h-4 text-foreground" />
@@ -258,7 +258,7 @@ export default function Home() {
         </Dialog>
       </header>
 
-      <main className="w-full max-w-lg flex flex-col items-center gap-6 z-10 flex-1">
+      <main className="w-full max-w-sm flex flex-col items-center gap-6 z-10 flex-1">
 
         <div className="flex items-center gap-5 w-full">
           <div className="relative">

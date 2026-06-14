@@ -4,7 +4,7 @@
 
 Zen Noise now ships real recorded audio assets under `client/public/audio/`. The app plays those files through Web Audio in `client/src/hooks/use-audio-engine.ts`, so each sound has a real local audio source plus per-sound gain control.
 
-The current pass improves authenticity and compatibility by replacing most OGG ambience assets with researched MP3 previews from CC0 Freesound recordings. Brown noise keeps a public-domain reference OGG and adds a generated fallback buffer for browsers that cannot decode OGG. Brown noise is now a standalone opt-in layer instead of part of the curated mixes, so ambient mixes stay lighter by default. Modulation now applies to every active layer, rotating emphasis so one sound rises briefly while the other layers settle back. Licensing and attribution are documented in `docs/audio-sample-sources.md` and `client/public/audio/audio-sources.json`.
+The current pass improves authenticity and compatibility by replacing most OGG ambience assets with researched MP3 previews from CC0 Freesound recordings, then expands the library with nine additional recorded layers: ocean surf, creek stream, forest waterfall, night crickets, room fan, city hush, train interior, airplane cabin, and washing machine. Brown noise keeps a public-domain reference OGG and adds a generated fallback buffer for browsers that cannot decode OGG. Brown noise is now a standalone opt-in layer instead of part of the curated mixes, so ambient mixes stay lighter by default. Modulation now applies to every active layer, rotating emphasis so one sound rises briefly while the other layers settle back. Licensing and attribution are documented in `docs/audio-sample-sources.md` and `client/public/audio/audio-sources.json`.
 
 ## Current Sound Coverage
 
@@ -20,6 +20,15 @@ The current pass improves authenticity and compatibility by replacing most OGG a
 | Tibetan bowl ringing | `/audio/tibetan-bowl.mp3` | Covered. Real Tibetan singing bowl recording, now CC0. |
 | Sleeping cat purr | `/audio/cat-purr.mp3` at 0.5x playback | Covered. Real cat purr recording slowed to half pace after envelope analysis found the original pulse around 428.6 BPM. |
 | Forest rustling leaves | `/audio/forest-leaves.mp3` | Covered. Gentler breeze-through-pines recording, replacing the more aggressive rustling-leaves WAV. |
+| Ocean surf | `/audio/ocean-waves.mp3` | Covered. Real soft surf recording, selected without gull or beach-crowd foreground content. |
+| Creek stream | `/audio/stream-river.mp3` | Covered. Real soft stream and babbling-brook recording. |
+| Forest waterfall | `/audio/waterfall-forest.mp3` | Covered. Real waterfall field recording with steady masking texture. |
+| Night crickets | `/audio/night-crickets.mp3` | Covered. Focused cricket-night recording from a pine forest. |
+| Room fan | `/audio/room-fan.mp3` | Covered. Real fan and vent room tone for mechanical masking without synthetic white/pink noise. |
+| City hush | `/audio/city-rumble.mp3` | Covered. Quiet distant traffic and residential night-city rumble. |
+| Train interior | `/audio/train-interior.mp3` | Covered. Real train-interior bed, chosen over announcement-heavy alternatives. |
+| Airplane cabin | `/audio/airplane-cabin.mp3` | Covered. Five-minute airliner cabin ambience. |
+| Washing machine | `/audio/washing-machine.mp3` | Covered. Real washer cycle with motor, spin, splash, and water texture. |
 
 ## Deep Audio Research Findings
 
@@ -30,6 +39,9 @@ The current pass improves authenticity and compatibility by replacing most OGG a
 - Brown noise is a noise color rather than a field recording target. A generated fallback is acceptable because it preserves the expected acoustic profile when the browser cannot decode the bundled OGG.
 - The prior forest leaves file felt too intense as a sleep layer, so it was replaced with a softer CC0 breeze-through-pines recording.
 - The cat purr file decoded to a 12.64 second stereo MP3. Its dominant RMS-envelope pulse measured around 428.6 BPM, so Zen Noise plays the purr source at 0.5x speed, reducing the perceived pulse to about 214.3 BPM and extending the loop to about 25.28 seconds.
+- The expanded set was chosen from Noisli's public catalog gaps and Google Nest's ambient-sound categories. Noisli lists ocean, stream, lake, crickets, waterfall, fan, cityscape, train, airplane, and washing machine alongside the sounds Zen Noise already had. Google Nest separately validates babbling brook, ocean, oscillating fan, river, running water, and thunderstorm as common ambient-sound requests.
+- Lake was the omitted Noisli gap because ocean, stream, and waterfall already cover three water movement textures. The replacement set keeps more distinct use cases: nature water, night insects, mechanical masking, city masking, and travel hum.
+- Candidate samples were rejected when metadata included foreground speech, radio, sirens, horns, children, coyotes/dogs, announcements, or short obvious event clips.
 
 ## Product Audio Changes Made In This Pass
 
@@ -43,6 +55,8 @@ The current pass improves authenticity and compatibility by replacing most OGG a
 - Added shuffle and share-link controls in `client/src/components/MixPresets.tsx`.
 - Added URL mix encoding and decoding so a shared mix can reopen the same ambient-layer state.
 - Extended modulation from brown noise to all active layers, rotating a short focus lift across the current sound set while returning every layer to its slider-set base volume.
+- Added nine recorded ambient layers: Ocean, Stream, Falls, Crickets, Fan, City, Train, Airplane, and Washer.
+- Updated curated mixes so the new library is represented in Focus, Sleep, Storm, Forest, Hearth, Reset, Coast, City, and Travel presets.
 
 ## Deep Audio Wiring Analytics
 
@@ -79,16 +93,28 @@ Moving a slider calls `setAmbientVolume(sound, value)`, clamps the value to `0..
 
 The modulation control is global rather than brown-noise-specific. During playback, `scheduleLayerModulation` builds the active sound list from brown noise plus every ambient layer above zero, then rotates a `starSound` through that list. The star layer gets a temporary gain lift, backing layers get a smaller temporary duck, and all layers return to their slider-set base volume before the next rotation.
 
-## Additional Calming Sounds To Add Next
+## 2026-06-14 Library Gap Research
 
-| Priority | Sound | Why it fits Zen Noise | Implementation note |
+| Priority | Sound | Why it fits Zen Noise | Implementation outcome |
 | --- | --- | --- | --- |
-| 1 | Ocean surf | Strong sleep association, natural low-frequency wash, pairs well with brown noise. | Use a long real surf loop without gulls by default. |
-| 2 | Creek or stream | Continuous, low-stress water movement that can mask speech without sharp events. | Prefer real stream recordings with no hikers, voices, or birds baked in. |
-| 3 | Soft fan or HVAC | Familiar steady mechanical sleep sound. | A synthesized fallback is acceptable, but a real fan recording is better for recognition. |
-| 4 | Night crickets | Natural nighttime cue, good for low-volume sleep ambience. | Keep volume capped and avoid sudden close insect calls. |
-| 5 | Light snowfall | Quiet granular texture with little semantic distraction. | Real snow or soft granular Foley can work; avoid icy crunches. |
-| 6 | Distant train or city hush | Good optional comfort layer for urban sleepers. | Keep distant, low, and non-rhythmic; avoid horns, brakes, sirens, and announcements. |
+| 1 | Ocean surf | Strong sleep association, natural low-frequency wash, pairs well with rain and wind. | Added `/audio/ocean-waves.mp3` from a soft surf recording. |
+| 2 | Creek stream | Continuous, low-stress water movement that can mask speech without sharp events. | Added `/audio/stream-river.mp3` from a soft stream recording. |
+| 3 | Waterfall | A stronger water-mask option that can stand in for green/brown-noise-style rumble without synthetic noise. | Added `/audio/waterfall-forest.mp3` and kept preset levels conservative. |
+| 4 | Night crickets | Natural nighttime cue, good for low-volume sleep ambience. | Added `/audio/night-crickets.mp3` from a focused pine-forest cricket recording. |
+| 5 | Room fan | Familiar steady mechanical sleep sound and the best real-recorded substitute for white/pink masking. | Added `/audio/room-fan.mp3` from fan and vent room tone. |
+| 6 | City hush | Helps urban sleepers by making distant traffic feel intentional instead of intrusive. | Added `/audio/city-rumble.mp3` and rejected siren/horn/talk clips. |
+| 7 | Train interior | Useful travel comfort layer with a low rhythmic bed. | Added `/audio/train-interior.mp3` and rejected announcement-heavy metro files. |
+| 8 | Airplane cabin | Popular mechanical hum for sleep, travel, and tinnitus-style masking. | Added `/audio/airplane-cabin.mp3` from a five-minute cabin recording. |
+| 9 | Washing machine | Domestic cyclic hum, useful for users who relax with household appliance beds. | Added `/audio/washing-machine.mp3` and rejected laundromat clips with radio or talk. |
+
+## Sounds To Consider Later
+
+| Sound | Why it is lower priority |
+| --- | --- |
+| Lake | Pleasant but less distinct after adding ocean, stream, and waterfall. |
+| Snowfall | Strong sleep mood, but harder to source as a clean real recording without footsteps or icy crunches. |
+| Library hush | Useful focus layer, but many real recordings include identifiable speech. |
+| Frogs | Good night ecology layer, but can become attention-grabbing quickly. |
 
 ## Sounds To Avoid Or Keep Optional
 
@@ -105,7 +131,7 @@ Before shipping major audio changes:
 2. Run `npm run check`.
 3. Run `npm run build`.
 4. Open the local app with `Start-Local-Site.cmd`.
-5. Test each ambient layer individually at 50 percent volume.
+5. Test each ambient layer individually at 50 percent volume, including Ocean, Stream, Falls, Crickets, Fan, City, Train, Airplane, and Washer.
 6. Apply each curated mix and confirm the visible sliders update.
 7. Use the share button, reopen the copied link, and confirm the same ambient mix loads without forcing brown noise on.
 8. Move each ambient slider down and back up; confirm the visible percentage and perceived layer intensity both change.

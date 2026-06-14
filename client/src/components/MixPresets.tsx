@@ -1,12 +1,15 @@
 import {
   Bell,
   BriefcaseBusiness,
+  Building2,
   CloudRain,
   Flame,
   Link2,
   Moon,
+  Plane,
   Shuffle,
   TreePine,
+  Waves,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { MixPreset } from "@/lib/mix-presets";
@@ -29,6 +32,9 @@ const ICONS = {
   forest: TreePine,
   fire: Flame,
   bowl: Bell,
+  ocean: Waves,
+  city: Building2,
+  travel: Plane,
 };
 
 export function MixPresets({

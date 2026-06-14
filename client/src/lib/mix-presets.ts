@@ -7,7 +7,7 @@ export interface MixState {
 export interface MixPreset extends MixState {
   id: string;
   label: string;
-  icon: "focus" | "sleep" | "rain" | "forest" | "fire" | "bowl";
+  icon: "focus" | "sleep" | "rain" | "forest" | "fire" | "bowl" | "ocean" | "city" | "travel";
   accent: string;
 }
 
@@ -21,6 +21,15 @@ export const DEFAULT_AMBIENT_VOLUMES: AmbientVolumes = {
   ring: 0,
   purring: 0,
   forest: 0,
+  ocean: 0,
+  stream: 0,
+  waterfall: 0,
+  crickets: 0,
+  fan: 0,
+  city: 0,
+  train: 0,
+  airplane: 0,
+  washer: 0,
 };
 
 export function clampVolume(value: number): number {
@@ -50,42 +59,63 @@ export const MIX_PRESETS: MixPreset[] = [
     label: "Focus",
     icon: "focus",
     accent: "text-sky-300",
-    ambientVolumes: createAmbientVolumes({ coffee: 0.22, rain: 0.1 }),
+    ambientVolumes: createAmbientVolumes({ coffee: 0.2, fan: 0.16, city: 0.08 }),
   },
   {
     id: "sleep-rain",
     label: "Sleep",
     icon: "sleep",
     accent: "text-indigo-300",
-    ambientVolumes: createAmbientVolumes({ rain: 0.28, purring: 0.16, wind: 0.08 }),
+    ambientVolumes: createAmbientVolumes({ rain: 0.24, ocean: 0.18, purring: 0.12 }),
   },
   {
     id: "rain-cabin",
     label: "Storm",
     icon: "rain",
     accent: "text-blue-300",
-    ambientVolumes: createAmbientVolumes({ rain: 0.34, thunder: 0.18, campfire: 0.12 }),
+    ambientVolumes: createAmbientVolumes({ rain: 0.28, thunder: 0.14, waterfall: 0.1 }),
   },
   {
     id: "forest-rest",
     label: "Forest",
     icon: "forest",
     accent: "text-emerald-300",
-    ambientVolumes: createAmbientVolumes({ forest: 0.22, birds: 0.14, wind: 0.08 }),
+    ambientVolumes: createAmbientVolumes({ forest: 0.2, stream: 0.16, birds: 0.1 }),
   },
   {
     id: "hearth",
     label: "Hearth",
     icon: "fire",
     accent: "text-orange-300",
-    ambientVolumes: createAmbientVolumes({ campfire: 0.24, purring: 0.18, wind: 0.06 }),
+    ambientVolumes: createAmbientVolumes({ campfire: 0.22, purring: 0.14, crickets: 0.1 }),
   },
   {
     id: "bowl-reset",
     label: "Reset",
     icon: "bowl",
     accent: "text-violet-300",
-    ambientVolumes: createAmbientVolumes({ ring: 0.2, forest: 0.12, wind: 0.08 }),
+    ambientVolumes: createAmbientVolumes({ ring: 0.18, ocean: 0.14, wind: 0.08 }),
+  },
+  {
+    id: "coast-drift",
+    label: "Coast",
+    icon: "ocean",
+    accent: "text-cyan-300",
+    ambientVolumes: createAmbientVolumes({ ocean: 0.28, stream: 0.08, wind: 0.06 }),
+  },
+  {
+    id: "city-hush",
+    label: "City",
+    icon: "city",
+    accent: "text-zinc-300",
+    ambientVolumes: createAmbientVolumes({ city: 0.18, fan: 0.16, train: 0.08 }),
+  },
+  {
+    id: "travel-hum",
+    label: "Travel",
+    icon: "travel",
+    accent: "text-fuchsia-300",
+    ambientVolumes: createAmbientVolumes({ airplane: 0.18, train: 0.12, washer: 0.08 }),
   },
 ];
 

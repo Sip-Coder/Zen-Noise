@@ -15,6 +15,15 @@ const expectedAmbients = [
   "ring",
   "purring",
   "forest",
+  "ocean",
+  "stream",
+  "waterfall",
+  "crickets",
+  "fan",
+  "city",
+  "train",
+  "airplane",
+  "washer",
 ];
 
 const expectedSampleSources = {
@@ -28,6 +37,15 @@ const expectedSampleSources = {
   ring: "/audio/tibetan-bowl.mp3",
   purring: "/audio/cat-purr.mp3",
   forest: "/audio/forest-leaves.mp3",
+  ocean: "/audio/ocean-waves.mp3",
+  stream: "/audio/stream-river.mp3",
+  waterfall: "/audio/waterfall-forest.mp3",
+  crickets: "/audio/night-crickets.mp3",
+  fan: "/audio/room-fan.mp3",
+  city: "/audio/city-rumble.mp3",
+  train: "/audio/train-interior.mp3",
+  airplane: "/audio/airplane-cabin.mp3",
+  washer: "/audio/washing-machine.mp3",
 };
 
 const expectedLabels = {
@@ -40,6 +58,15 @@ const expectedLabels = {
   ring: "Bowl",
   purring: "Purr",
   forest: "Forest",
+  ocean: "Ocean",
+  stream: "Stream",
+  waterfall: "Falls",
+  crickets: "Crickets",
+  fan: "Fan",
+  city: "City",
+  train: "Train",
+  airplane: "Airplane",
+  washer: "Washer",
 };
 
 const docCoverageTerms = [
@@ -54,6 +81,15 @@ const docCoverageTerms = [
   "Tibetan bowl ringing",
   "Sleeping cat purr",
   "Forest rustling leaves",
+  "Ocean surf",
+  "Creek stream",
+  "Forest waterfall",
+  "Night crickets",
+  "Room fan",
+  "City hush",
+  "Train interior",
+  "Airplane cabin",
+  "Washing machine",
   "Recorded Audio Sources",
 ];
 
@@ -291,6 +327,9 @@ if (!ambientComponentText.includes("data-testid={`ambient-volume-${opt.value}`}"
   "forest-rest",
   "hearth",
   "bowl-reset",
+  "coast-drift",
+  "city-hush",
+  "travel-hum",
 ].forEach((needle) => {
   if (!mixPresetsText.includes(needle)) failures.push(`Mix preset wiring is missing source evidence: ${needle}.`);
 });
